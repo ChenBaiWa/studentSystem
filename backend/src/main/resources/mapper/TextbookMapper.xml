@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.studentsystem.mapper.TextbookMapper">
+
+    <resultMap id="TextbookResultMap" type="com.studentsystem.entity.Textbook">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="gradeId" column="grade_id"/>
+        <result property="gradeName" column="grade_name"/>
+        <result property="creatorId" column="creator_id"/>
+        <result property="creatorName" column="creator_name"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <!-- 插入课本 -->
+    <insert id="insert" parameterType="com.studentsystem.entity.Textbook" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO textbook (name, grade_id, grade_name, creator_id, creator_name, create_time, update_time)
+        VALUES (#{name}, #{gradeId}, #{gradeName}, #{creatorId}, #{creatorName}, #{createTime}, #{updateTime})
+    </insert>
+
+    <!-- 根据年级ID和创建人ID查询课本列表 -->
+    <select id="selectByTextbookList" resultMap="TextbookResultMap">
+        SELECT * FROM textbook 
+        WHERE grade_id = #{gradeId} AND creator_id = #{creatorId}
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- 检查同一创建人在同一_grade下是否存在相同名称的课本 -->
+    <select id="countByNameAndGradeIdAndCreatorId" resultType="int">
+        SELECT COUNT(*) FROM textbook 
+        WHERE name = #{name} AND grade_id = #{gradeId} AND creator_id = #{creatorId}
+    </select>
+
+    <!-- 根据课本ID查询关联的章节数量 -->
+    <select id="countChaptersByTextbookId" resultType="int">
+        SELECT COUNT(*) FROM chapter WHERE textbook_id = #{textbookId}
+    </select>
+
+    <!-- 根据ID查询课本 -->
+    <select id="selectById" resultMap="TextbookResultMap" parameterType="long">
+        SELECT * FROM textbook WHERE id = #{id}
+    </select>
+
+    <!-- 更新课本 -->
+    <update id="updateById" parameterType="com.studentsystem.entity.Textbook">
+        UPDATE textbook
+        SET name = #{name},
+            grade_id = #{gradeId},
+            grade_name = #{gradeName},
+            update_time = #{updateTime}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 删除课本 -->
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM textbook WHERE id = #{id}
+    </delete>
+
+</mapper>

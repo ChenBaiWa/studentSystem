@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.studentsystem.mapper.GradeMapper">
+
+    <resultMap id="GradeResultMap" type="com.studentsystem.entity.Grade">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="creatorId" column="creator_id"/>
+        <result property="creatorName" column="creator_name"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <!-- 插入年级 -->
+    <insert id="insert" parameterType="com.studentsystem.entity.Grade" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO grade (name, creator_id, creator_name, create_time, update_time)
+        VALUES (#{name}, #{creatorId}, #{creatorName}, #{createTime}, #{updateTime})
+    </insert>
+
+    <!-- 根据创建人ID查询年级列表 -->
+    <select id="selectByCreatorId" resultMap="GradeResultMap">
+        SELECT * FROM grade 
+        WHERE creator_id = #{creatorId}
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- 根据ID查询年级 -->
+    <select id="selectById" resultMap="GradeResultMap" parameterType="long">
+        SELECT * FROM grade WHERE id = #{id}
+    </select>
+
+    <!-- 更新年级 -->
+    <update id="update" parameterType="com.studentsystem.entity.Grade">
+        UPDATE grade
+        SET name = #{name},
+            update_time = #{updateTime}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 删除年级 -->
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM grade WHERE id = #{id}
+    </delete>
+
+</mapper>
