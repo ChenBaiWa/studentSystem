@@ -8,9 +8,9 @@ import ChapterManagement from '../views/ChapterManagement.vue'
 import ClassManagement from '../views/ClassManagement.vue'
 import AssignmentManagement from '../views/AssignmentManagement.vue'
 import StudentAssignmentList from '../views/StudentAssignmentList.vue'
+import DoubaoFileAnalysis from '../views/DoubaoFileAnalysis.vue'
 import ExerciseSetManagement from '../views/ExerciseSetManagement.vue'
 import QuestionManagement from '../views/QuestionManagement.vue'
-import PdfUpload from '../views/PdfUpload.vue'
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -61,6 +61,11 @@ const router = createRouter({
       component: StudentAssignmentList
     },
     {
+      path: '/doubao-analysis',
+      name: 'DoubaoFileAnalysis',
+      component: DoubaoFileAnalysis
+    },
+    {
       path: '/exercise-sets',
       name: 'ExerciseSetManagement',
       component: ExerciseSetManagement
@@ -70,11 +75,6 @@ const router = createRouter({
       name: 'QuestionManagement',
       component: QuestionManagement,
       props: true
-    },
-    {
-      path: '/pdf-upload',
-      name: 'PdfUpload',
-      component: PdfUpload
     }
   ]
 })

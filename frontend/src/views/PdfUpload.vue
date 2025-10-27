@@ -57,6 +57,23 @@
           <el-button type="success" @click="useAnalysisResult">使用解析结果</el-button>
         </div>
       </div>
+      
+      <!-- 错误信息展示 -->
+      <div v-if="error" class="error-message">
+        <el-alert
+          :title="error"
+          type="error"
+          show-icon
+          closable
+          @close="error = ''"
+        />
+      </div>
+      
+      <!-- 解析进度 -->
+      <div v-if="uploading && !analysisResult" class="parsing-progress">
+        <el-progress :percentage="progress" :show-text="true" />
+        <p class="progress-text">AI正在解析中，请稍候...</p>
+      </div>
     </el-card>
   </div>
 </template>
@@ -65,47 +82,53 @@
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { UploadFilled } from '@element-plus/icons-vue'
-import { parsePdfToQuestions } from '@/api/doubaoApi'
+import { uploadPdfFile } from '@/api/fileUploadApi'
 import type { UploadFile, UploadFiles } from 'element-plus'
 
 // 定义事件发射
 const emit = defineEmits<{
-  (e: 'analysisComplete', result: any): void
+  (e: 'analysisComplete', result: any[]): void
 }>()
 
 // 文件相关状态
 const fileList = ref<UploadFiles>([])
 const selectedFile = ref<File | null>(null)
 const uploading = ref(false)
+const progress = ref(0)
 
 // 解析结果
 const analysisResult = ref('')
+const error = ref('')
 
 // 处理文件选择
 const handleFileChange = (file: UploadFile, files: UploadFiles) => {
-  // 只保留最后一个文件
-  if (files.length > 1) {
-    files.splice(0, files.length - 1)
-  }
-  
-  // 检查文件类型
-  if (file.raw) {
-    if (file.raw.type !== 'application/pdf') {
-      ElMessage.error('请上传PDF格式文件')
-      fileList.value = []
-      selectedFile.value = null
-      return
+  try {
+    // 清除之前的错误信息
+    error.value = ''
+    
+    // 只保留最后一个文件
+    if (files.length > 1) {
+      files.splice(0, files.length - 1)
     }
     
-    // 检查文件大小（10MB限制）
-    if (file.raw.size > 10 * 1024 * 1024) {
-      ElMessage.error('文件大小不能超过10MB')
-      fileList.value = []
-      selectedFile.value = null
-      return
+    // 检查文件类型
+    if (file.raw) {
+      if (file.raw.type !== 'application/pdf') {
+        throw new Error('请上传PDF格式文件')
+      }
+      
+      // 检查文件大小（10MB限制）
+      if (file.raw.size > 10 * 1024 * 1024) {
+        throw new Error('文件大小不能超过10MB')
+      }
+      
+      selectedFile.value = file.raw
     }
-    
-    selectedFile.value = file.raw
+  } catch (err: any) {
+    error.value = err.message
+    ElMessage.error(err.message)
+    fileList.value = []
+    selectedFile.value = null
   }
 }
 
@@ -113,31 +136,56 @@ const handleFileChange = (file: UploadFile, files: UploadFiles) => {
 const handleFileRemove = () => {
   selectedFile.value = null
   analysisResult.value = ''
+  error.value = ''
+  progress.value = 0
 }
 
 // 上传并AI解析
 const handleUploadAndAnalyze = async () => {
   if (!selectedFile.value) {
-    ElMessage.warning('请先选择PDF文件')
+    const errorMsg = '请先选择PDF文件'
+    error.value = errorMsg
+    ElMessage.warning(errorMsg)
     return
   }
   
   try {
     uploading.value = true
+    error.value = ''
+    progress.value = 0
     
-    // 使用新的API方法解析PDF
-    const result = await parsePdfToQuestions(selectedFile.value)
+    // 模拟进度更新
+    const progressInterval = setInterval(() => {
+      if (progress.value < 90) {
+        progress.value += 10;
+      }
+    }, 500);
     
+    // 上传PDF文件到服务器并获取解析结果
+    const result = await uploadPdfFile(selectedFile.value)
+    console.log('文件上传和解析成功，结果:', result)
+    
+    // 停止进度更新
+    clearInterval(progressInterval);
+    progress.value = 100;
+    
+    // 检查是否成功
     if (result.success) {
       // 将解析结果转换为字符串显示
-      analysisResult.value = JSON.stringify(result.questions, null, 2)
-      ElMessage.success('AI解析完成')
+      analysisResult.value = JSON.stringify(result.data, null, 2)
+      
+      // 自动处理解析结果
+      setTimeout(() => {
+        useAnalysisResult()
+      }, 1000)
     } else {
-      throw new Error('AI解析失败')
+      throw new Error(result.message || 'AI解析失败')
     }
-  } catch (error: any) {
-    console.error('上传并解析失败:', error)
-    ElMessage.error(error.message || '上传并解析失败')
+  } catch (err: any) {
+    console.error('上传并解析失败:', err)
+    const errorMsg = err.message || '上传并解析失败'
+    error.value = errorMsg
+    ElMessage.error(errorMsg)
   } finally {
     uploading.value = false
   }
@@ -145,18 +193,60 @@ const handleUploadAndAnalyze = async () => {
 
 // 使用解析结果
 const useAnalysisResult = () => {
-  // 这里可以将解析结果传递给父组件或跳转到题目编辑页面
-  ElMessage.success('解析结果已保存')
-  
   try {
     // 尝试解析存储的JSON结果
     const parsedResult = JSON.parse(analysisResult.value)
+    
+    // 将AI返回的数据转换为后端需要的格式
+    const questions = convertAiDataToQuestions(parsedResult)
+    
     // 发射事件，将结果传递给父组件
-    emit('analysisComplete', parsedResult)
-  } catch (error) {
-    // 如果解析失败，发送原始字符串
-    emit('analysisComplete', analysisResult.value)
+    emit('analysisComplete', questions)
+    ElMessage.success('解析结果已保存到习题集')
+  } catch (err) {
+    ElMessage.error('解析结果处理失败')
   }
+}
+
+// 将AI返回的数据转换为后端需要的格式
+const convertAiDataToQuestions = (aiData: any) => {
+  const questions: any[] = []
+  let sortOrder = 1
+  
+  // 处理选择题
+  if (aiData.choice && Array.isArray(aiData.choice)) {
+    aiData.choice.forEach((question: any) => {
+      questions.push({
+        ...question,
+        type: 'choice',
+        sortOrder: sortOrder++
+      })
+    })
+  }
+  
+  // 处理填空题
+  if (aiData.fill && Array.isArray(aiData.fill)) {
+    aiData.fill.forEach((question: any) => {
+      questions.push({
+        ...question,
+        type: 'fill',
+        sortOrder: sortOrder++
+      })
+    })
+  }
+  
+  // 处理主观题
+  if (aiData.subjective && Array.isArray(aiData.subjective)) {
+    aiData.subjective.forEach((question: any) => {
+      questions.push({
+        ...question,
+        type: 'subjective',
+        sortOrder: sortOrder++
+      })
+    })
+  }
+  
+  return questions
 }
 
 // 重置表单
@@ -164,6 +254,8 @@ const resetForm = () => {
   fileList.value = []
   selectedFile.value = null
   analysisResult.value = ''
+  error.value = ''
+  progress.value = 0
 }
 </script>
 
@@ -193,5 +285,19 @@ const resetForm = () => {
 
 .analysis-result {
   margin-top: 30px;
+}
+
+.error-message {
+  margin-top: 20px;
+}
+
+.parsing-progress {
+  margin-top: 30px;
+  text-align: center;
+}
+
+.progress-text {
+  margin-top: 10px;
+  color: #666;
 }
 </style>

@@ -2,7 +2,7 @@ import axios from 'axios'
 
 const api = axios.create({
   baseURL: '/api',
-  timeout: 10000
+  timeout: 1000000
 })
 
 // 添加请求拦截器
@@ -64,7 +64,7 @@ export const publishAssignment = (assignment: any, classIds: number[]) => {
     ...assignment,
     classIds: classIds
   };
-  return api.post('/assignments', data).then(response => {
+  return api.post('/assignments/publish', data).then(response => {
     if (response.data.success === false && response.data.message) {
       return Promise.reject(new Error(response.data.message))
     }

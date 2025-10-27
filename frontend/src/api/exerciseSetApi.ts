@@ -2,7 +2,7 @@ import axios from 'axios'
 
 const api = axios.create({
   baseURL: '/api',
-  timeout: 10000
+  timeout: 60000 // 将超时时间从10秒增加到60秒
 })
 
 // 添加请求拦截器
@@ -82,22 +82,17 @@ export const deleteExerciseSet = (id: number) => {
   return api.delete(`/exercise-sets/${id}`).then(response => response.data)
 }
 
-// 上传PDF文件
-export const uploadPdf = (id: number, file: File) => {
+// 上传PDF文件并进行AI解析
+export const uploadAndParsePdf = (exerciseSetId: number, file: File) => {
   const formData = new FormData()
-  formData.append('pdfFile', file)
-  return api.post(`/exercise-sets/${id}/upload-pdf`, formData, {
+  formData.append('file', file)
+  formData.append('exerciseSetId', exerciseSetId.toString())
+  
+  return api.post(`/upload`, formData, {
     headers: {
       'Content-Type': 'multipart/form-data'
-    }
-  }).then(response => response.data)
-}
-
-// AI解析PDF
-export const parsePdfWithAI = (id: number, pdfUrl: string) => {
-  return api.post(`/ai/parse-pdf`, {
-    setId: id,
-    pdfUrl: pdfUrl
+    },
+    timeout: 120000 // 为上传PDF单独设置120秒超时时间
   }).then(response => response.data)
 }
 
@@ -121,10 +116,7 @@ export const deleteQuestion = (exerciseSetId: number, id: number) => {
   return api.delete(`/exercise-sets/${exerciseSetId}/questions/${id}`).then(response => response.data)
 }
 
-// 保存题目列表
-export const saveQuestions = (setId: number, questionList: any[]) => {
-  return api.post(`/exercise-set/save-questions`, {
-    setId: setId,
-    questionList: questionList
-  }).then(response => response.data)
+// 批量保存题目
+export const saveQuestions = (exerciseSetId: number, questions: any[]) => {
+  return api.post(`/exercise-sets/${exerciseSetId}/questions/batch`, questions).then(response => response.data)
 }

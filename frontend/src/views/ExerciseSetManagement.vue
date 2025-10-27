@@ -108,7 +108,36 @@
       width="800px"
       @close="handlePdfDialogClose"
     >
-      <PdfUpload @analysisComplete="handlePdfAnalysisComplete" />
+      <el-form :model="pdfForm" label-width="100px" v-if="!isParsing">
+        <el-form-item label="选择习题集" prop="exerciseSetId" required>
+          <el-select
+            v-model="pdfForm.exerciseSetId"
+            placeholder="请选择要导入题目的习题集"
+            style="width: 100%"
+            filterable
+          >
+            <el-option
+              v-for="exerciseSet in exerciseSets"
+              :key="exerciseSet.id"
+              :label="`${exerciseSet.name} (${exerciseSet.subject})`"
+              :value="exerciseSet.id"
+            />
+          </el-select>
+        </el-form-item>
+      </el-form>
+
+      <PdfUpload
+        v-if="pdfForm.exerciseSetId && pdfDialogVisible"
+        @analysisComplete="handlePdfAnalysisComplete"
+      />
+
+      <div v-if="!pdfForm.exerciseSetId && pdfDialogVisible" class="select-prompt">
+        <el-alert
+          title="请先选择要导入题目的习题集"
+          type="info"
+          show-icon
+        />
+      </div>
     </el-dialog>
   </div>
 </template>
@@ -120,7 +149,8 @@ import {
   getExerciseSets,
   createExerciseSet,
   updateExerciseSet,
-  deleteExerciseSet
+  deleteExerciseSet,
+  saveQuestions
 } from '@/api/exerciseSetApi'
 import type { ExerciseSet } from '@/types/ExerciseSet'
 import type { FormInstance } from 'element-plus'
@@ -131,6 +161,7 @@ import PdfUpload from './PdfUpload.vue'
 const exerciseSets = ref<ExerciseSet[]>([])
 const loading = ref(false)
 const submitLoading = ref(false)
+const isParsing = ref(false)
 
 // 表单相关
 const dialogVisible = ref(false)
@@ -138,6 +169,11 @@ const pdfDialogVisible = ref(false)
 const isEdit = ref(false)
 const exerciseSetFormRef = ref<FormInstance>()
 const editingId = ref<number | null>(null)
+
+// PDF上传表单
+const pdfForm = reactive({
+  exerciseSetId: null as number | null
+})
 
 // 路由
 const router = useRouter()
@@ -172,9 +208,9 @@ const loadExerciseSets = async () => {
       ElMessage.error(response.message || '数据加载失败')
       exerciseSets.value = []
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('加载习题集列表失败:', error)
-    ElMessage.error('加载习题集列表失败')
+    ElMessage.error(error.message || '加载习题集列表失败')
     exerciseSets.value = []
   } finally {
     loading.value = false
@@ -191,26 +227,49 @@ const handleCreate = () => {
 
 // 处理PDF上传
 const handlePdfUpload = () => {
+  if (exerciseSets.value.length === 0) {
+    ElMessage.warning('请先创建习题集')
+    return
+  }
+
+  // 重置PDF表单
+  pdfForm.exerciseSetId = null
   pdfDialogVisible.value = true
 }
 
 // 处理PDF对话框关闭
 const handlePdfDialogClose = () => {
-  // 可以在这里添加关闭时的清理逻辑
+  // 重置表单
+  pdfForm.exerciseSetId = null
+  isParsing.value = false
 }
 
 // 处理PDF解析完成
-const handlePdfAnalysisComplete = (result: string) => {
-  // 处理PDF解析完成的逻辑
-  console.log('PDF解析完成:', result)
-  ElMessage.success('PDF解析完成，可以开始创建习题集了')
-  pdfDialogVisible.value = false
-  
-  // 可以在这里自动创建一个习题集并将解析结果用于题目创建
-  // 例如：
-  // 1. 创建一个新的习题集
-  // 2. 跳转到题目管理页面
-  // 3. 将解析结果传递过去用于自动创建题目
+const handlePdfAnalysisComplete = async (questions: any[]) => {
+  try {
+    if (!pdfForm.exerciseSetId) {
+      throw new Error('未选择习题集')
+    }
+
+    isParsing.value = true
+
+    // 直接将解析的题目保存到数据库中
+    const response = await saveQuestions(pdfForm.exerciseSetId, questions)
+
+    if (response.success) {
+      ElMessage.success(`题目保存成功，共保存${response.data.length}道题目`)
+      // 重新加载习题集列表以更新题目数量
+      loadExerciseSets()
+      // 关闭对话框
+      pdfDialogVisible.value = false
+    } else {
+      throw new Error(response.message || '保存题目失败')
+    }
+  } catch (error: any) {
+    ElMessage.error(error.message || '保存题目失败')
+  } finally {
+    isParsing.value = false
+  }
 }
 
 // 处理编辑
@@ -246,8 +305,8 @@ const handleDelete = (exerciseSet: ExerciseSet) => {
       } else {
         ElMessage.error(response.message || '删除失败')
       }
-    } catch (error) {
-      ElMessage.error('删除失败')
+    } catch (error: any) {
+      ElMessage.error(error.message || '删除失败')
     }
   }).catch(() => {
     // 用户取消删除
@@ -304,28 +363,3 @@ const formatDate = (dateString?: string) => {
   return date.toLocaleString('zh-CN')
 }
 </script>
-
-<style scoped>
-.exercise-set-management {
-  padding: 20px;
-}
-
-.header-card {
-  margin-bottom: 20px;
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.header-buttons {
-  display: flex;
-  gap: 10px;
-}
-
-.list-card {
-  margin-bottom: 20px;
-}
-</style>

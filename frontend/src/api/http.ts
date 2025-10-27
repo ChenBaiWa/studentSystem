@@ -3,7 +3,7 @@ import axios from 'axios'
 // 创建axios实例
 const http = axios.create({
   baseURL: '/api',
-  timeout: 10000
+  timeout: 1000000
 })
 
 // 请求拦截器：自动添加权限头

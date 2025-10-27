@@ -3,7 +3,7 @@ import type { Student } from '@/types/Student'
 
 const api = axios.create({
   baseURL: '/api',
-  timeout: 10000
+  timeout: 1000000
 })
 
 // 添加请求拦截器
