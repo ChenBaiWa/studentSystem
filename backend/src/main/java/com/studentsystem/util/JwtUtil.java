@@ -23,8 +23,6 @@ public class JwtUtil {
     @Value("${jwt.expiration}")
     private Long expiration;
 
-    @Value("${jwt.remember-expiration}")
-    private Long rememberExpiration;
 
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(secret.getBytes());
@@ -36,7 +34,7 @@ public class JwtUtil {
         claims.put("userRole", userRole);
         claims.put("realName", realName);
 
-        long expireTime = rememberMe ? rememberExpiration : expiration;
+        long expireTime = expiration ;
 
         return Jwts.builder()
                 .setClaims(claims)
@@ -91,7 +89,7 @@ public class JwtUtil {
             return null;
         }
     }
-    
+
     public String getRealNameFromToken(String token) {
         try {
             return parseToken(token).get("realName", String.class);
@@ -113,7 +111,7 @@ public class JwtUtil {
         }
         return null;
     }
-    
+
     // 添加从HTTP请求中获取用户角色的方法
     public Integer getUserRoleFromRequest(HttpServletRequest request) {
         String token = getTokenFromRequest(request);
@@ -122,7 +120,7 @@ public class JwtUtil {
         }
         return null;
     }
-    
+
     // 添加从HTTP请求中获取真实姓名的方法
     public String getRealNameFromRequest(HttpServletRequest request) {
         String token = getTokenFromRequest(request);

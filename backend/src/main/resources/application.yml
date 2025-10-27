@@ -5,10 +5,14 @@ server:
 
 spring:
   datasource:
-    url: jdbc:mysql://127.0.0.1:3306/student_system?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    url: jdbc:mysql://localhost:3306/student_system?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=GMT%2B8
     username: root
     password: root
-    driver-class-name: com.mysql.jdbc.Driver
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 50MB
 
 mybatis-plus:
   mapper-locations: classpath:mapper/*.xml
@@ -23,9 +27,8 @@ jackson:
 
 logging:
   level:
-    com.studentsystem: DEBUG
+    com.studentsystem: debug
 
-# JWT configurations
 jwt:
   secret: student-system-jwt-secret-key-2025-10-22
   expiration: 7200000 # 2 hours in milliseconds

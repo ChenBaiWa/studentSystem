@@ -80,7 +80,7 @@ public class AssignmentController {
         assignment.setCreatorId(teacherId);
         assignment.setCreateTime(LocalDateTime.now());
         assignment.setUpdateTime(LocalDateTime.now());
-        assignment.setCreatorName("1");
+        
         // 从作业对象中提取classIds
         List<Long> classIds = assignment.getClassIds();
 

@@ -24,4 +24,5 @@ public class Assignment {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updateTime; // 更新时间
     private List<Long> classIds; // 班级ID列表（用于发布作业）
+    private Integer submissionCount; // 提交人数
 }
