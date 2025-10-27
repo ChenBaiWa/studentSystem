@@ -42,7 +42,8 @@ const routes = [
   { path: '/student-assignments', redirect: '/student/assignments' }, // 兼容旧路由
   { path: '/student/exercise-sets', component: StudentExerciseSetList },
   { path: '/student/exercise-sets/:exerciseSetId/chapters', component: StudentExerciseChapterList, props: true },
-  { path: '/student/exercise-sets/:exerciseSetId/chapters/:chapterId/questions', component: StudentExerciseQuestion, props: true },
+  { path: '/student/exercise-sets/:exerciseSetId/chapters/:chapterId', component: StudentExerciseQuestion, props: true },
+  { path: '/student/exercise-sets/:exerciseSetId/direct', component: StudentExerciseQuestion, props: true },
 ]
 
 const router = createRouter({

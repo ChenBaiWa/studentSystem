@@ -9,7 +9,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.*;
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/exercise-sets")
@@ -30,15 +33,9 @@ public class ExerciseSetController {
     @GetMapping
     public ResponseEntity<Map<String, Object>> getExerciseSets(HttpServletRequest request) {
         Map<String, Object> response = new HashMap<>();
-        Long teacherId = jwtUtil.getUserIdFromRequest(request);
-        if (teacherId == null) {
-            response.put("success", false);
-            response.put("message", "未登录");
-            return ResponseEntity.status(401).body(response);
-        }
-        
         try {
-            List<ExerciseSet> exerciseSets = exerciseSetService.getExerciseSetsByCreatorId(teacherId);
+            Long creatorId = jwtUtil.getUserIdFromRequest(request);
+            List<ExerciseSet> exerciseSets = exerciseSetService.getExerciseSetsByCreatorId(creatorId);
             response.put("success", true);
             response.put("data", exerciseSets);
             return ResponseEntity.ok(response);
@@ -57,68 +54,23 @@ public class ExerciseSetController {
      */
     @PostMapping
     public ResponseEntity<Map<String, Object>> createExerciseSet(
-            @RequestBody ExerciseSet exerciseSet,
+            @RequestBody ExerciseSet exerciseSet, 
             HttpServletRequest request) {
         Map<String, Object> response = new HashMap<>();
-        Long teacherId = jwtUtil.getUserIdFromRequest(request);
-        if (teacherId == null) {
-            response.put("success", false);
-            response.put("message", "未登录");
-            return ResponseEntity.status(401).body(response);
-        }
-        
         try {
-            // 设置创建者信息
-            exerciseSet.setCreatorId(teacherId);
-            
-            // 从token中获取创建者姓名
+            Long creatorId = jwtUtil.getUserIdFromRequest(request);
             String creatorName = jwtUtil.getRealNameFromRequest(request);
+            
+            exerciseSet.setCreatorId(creatorId);
             exerciseSet.setCreatorName(creatorName);
             
             ExerciseSet created = exerciseSetService.createExerciseSet(exerciseSet);
             response.put("success", true);
-            response.put("message", "创建成功");
             response.put("data", created);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             response.put("success", false);
-            response.put("message", "创建失败: " + e.getMessage());
-            return ResponseEntity.status(500).body(response);
-        }
-    }
-    
-    /**
-     * 获取习题集详情
-     * @param id 习题集ID
-     * @param request HTTP请求
-     * @return 习题集详情
-     */
-    @GetMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> getExerciseSet(
-            @PathVariable Long id,
-            HttpServletRequest request) {
-        Map<String, Object> response = new HashMap<>();
-        Long teacherId = jwtUtil.getUserIdFromRequest(request);
-        if (teacherId == null) {
-            response.put("success", false);
-            response.put("message", "未登录");
-            return ResponseEntity.status(401).body(response);
-        }
-        
-        try {
-            ExerciseSet exerciseSet = exerciseSetService.getExerciseSetById(id);
-            if (exerciseSet == null) {
-                response.put("success", false);
-                response.put("message", "习题集不存在");
-                return ResponseEntity.status(404).body(response);
-            }
-            
-            response.put("success", true);
-            response.put("data", exerciseSet);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            response.put("success", false);
-            response.put("message", "获取习题集详情失败: " + e.getMessage());
+            response.put("message", "创建习题集失败: " + e.getMessage());
             return ResponseEntity.status(500).body(response);
         }
     }
@@ -136,34 +88,44 @@ public class ExerciseSetController {
             @RequestBody ExerciseSet exerciseSet,
             HttpServletRequest request) {
         Map<String, Object> response = new HashMap<>();
-        Long teacherId = jwtUtil.getUserIdFromRequest(request);
-        if (teacherId == null) {
-            response.put("success", false);
-            response.put("message", "未登录");
-            return ResponseEntity.status(401).body(response);
-        }
-        
         try {
-            ExerciseSet existing = exerciseSetService.getExerciseSetById(id);
-            if (existing == null) {
-                response.put("success", false);
-                response.put("message", "习题集不存在");
-                return ResponseEntity.status(404).body(response);
-            }
-            
-            boolean success = exerciseSetService.updateExerciseSet(id, exerciseSet);
-            if (success) {
+            boolean result = exerciseSetService.updateExerciseSet(id, exerciseSet);
+            if (result) {
                 response.put("success", true);
                 response.put("message", "更新成功");
-                return ResponseEntity.ok(response);
             } else {
                 response.put("success", false);
-                response.put("message", "更新失败");
-                return ResponseEntity.status(500).body(response);
+                response.put("message", "更新失败，习题集不存在");
             }
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             response.put("success", false);
-            response.put("message", "更新失败: " + e.getMessage());
+            response.put("message", "更新习题集失败: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+    
+    /**
+     * 获取习题集详情
+     * @param id 习题集ID
+     * @return 习题集详情
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<Map<String, Object>> getExerciseSet(@PathVariable Long id) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            ExerciseSet exerciseSet = exerciseSetService.getExerciseSetById(id);
+            if (exerciseSet != null) {
+                response.put("success", true);
+                response.put("data", exerciseSet);
+            } else {
+                response.put("success", false);
+                response.put("message", "习题集不存在");
+            }
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "获取习题集详情失败: " + e.getMessage());
             return ResponseEntity.status(500).body(response);
         }
     }
@@ -171,39 +133,21 @@ public class ExerciseSetController {
     /**
      * 发布习题集
      * @param id 习题集ID
-     * @param request HTTP请求
      * @return 发布结果
      */
     @PostMapping("/{id}/publish")
-    public ResponseEntity<Map<String, Object>> publishExerciseSet(
-            @PathVariable Long id,
-            HttpServletRequest request) {
+    public ResponseEntity<Map<String, Object>> publishExerciseSet(@PathVariable Long id) {
         Map<String, Object> response = new HashMap<>();
-        Long teacherId = jwtUtil.getUserIdFromRequest(request);
-        if (teacherId == null) {
-            response.put("success", false);
-            response.put("message", "未登录");
-            return ResponseEntity.status(401).body(response);
-        }
-        
         try {
-            ExerciseSet exerciseSet = exerciseSetService.getExerciseSetById(id);
-            if (exerciseSet == null) {
-                response.put("success", false);
-                response.put("message", "习题集不存在");
-                return ResponseEntity.status(404).body(response);
-            }
-            
-            boolean success = exerciseSetService.publishExerciseSet(id);
-            if (success) {
+            boolean result = exerciseSetService.publishExerciseSet(id);
+            if (result) {
                 response.put("success", true);
                 response.put("message", "发布成功");
-                return ResponseEntity.ok(response);
             } else {
                 response.put("success", false);
-                response.put("message", "发布失败");
-                return ResponseEntity.status(500).body(response);
+                response.put("message", "发布失败，习题集不存在");
             }
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             response.put("success", false);
             response.put("message", e.getMessage());
@@ -214,39 +158,21 @@ public class ExerciseSetController {
     /**
      * 取消发布习题集
      * @param id 习题集ID
-     * @param request HTTP请求
      * @return 取消发布结果
      */
     @PostMapping("/{id}/unpublish")
-    public ResponseEntity<Map<String, Object>> unpublishExerciseSet(
-            @PathVariable Long id,
-            HttpServletRequest request) {
+    public ResponseEntity<Map<String, Object>> unpublishExerciseSet(@PathVariable Long id) {
         Map<String, Object> response = new HashMap<>();
-        Long teacherId = jwtUtil.getUserIdFromRequest(request);
-        if (teacherId == null) {
-            response.put("success", false);
-            response.put("message", "未登录");
-            return ResponseEntity.status(401).body(response);
-        }
-        
         try {
-            ExerciseSet exerciseSet = exerciseSetService.getExerciseSetById(id);
-            if (exerciseSet == null) {
-                response.put("success", false);
-                response.put("message", "习题集不存在");
-                return ResponseEntity.status(404).body(response);
-            }
-            
-            boolean success = exerciseSetService.unpublishExerciseSet(id);
-            if (success) {
+            boolean result = exerciseSetService.unpublishExerciseSet(id);
+            if (result) {
                 response.put("success", true);
                 response.put("message", "取消发布成功");
-                return ResponseEntity.ok(response);
             } else {
                 response.put("success", false);
-                response.put("message", "取消发布失败");
-                return ResponseEntity.status(500).body(response);
+                response.put("message", "取消发布失败，习题集不存在");
             }
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             response.put("success", false);
             response.put("message", "取消发布失败: " + e.getMessage());
@@ -257,42 +183,24 @@ public class ExerciseSetController {
     /**
      * 删除习题集
      * @param id 习题集ID
-     * @param request HTTP请求
      * @return 删除结果
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> deleteExerciseSet(
-            @PathVariable Long id,
-            HttpServletRequest request) {
+    public ResponseEntity<Map<String, Object>> deleteExerciseSet(@PathVariable Long id) {
         Map<String, Object> response = new HashMap<>();
-        Long teacherId = jwtUtil.getUserIdFromRequest(request);
-        if (teacherId == null) {
-            response.put("success", false);
-            response.put("message", "未登录");
-            return ResponseEntity.status(401).body(response);
-        }
-        
         try {
-            ExerciseSet exerciseSet = exerciseSetService.getExerciseSetById(id);
-            if (exerciseSet == null) {
-                response.put("success", false);
-                response.put("message", "习题集不存在");
-                return ResponseEntity.status(404).body(response);
-            }
-            
-            boolean success = exerciseSetService.deleteExerciseSet(id);
-            if (success) {
+            boolean result = exerciseSetService.deleteExerciseSet(id);
+            if (result) {
                 response.put("success", true);
                 response.put("message", "删除成功");
-                return ResponseEntity.ok(response);
             } else {
                 response.put("success", false);
-                response.put("message", "删除失败");
-                return ResponseEntity.status(500).body(response);
+                response.put("message", "删除失败，习题集不存在");
             }
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             response.put("success", false);
-            response.put("message", "删除失败: " + e.getMessage());
+            response.put("message", "删除习题集失败: " + e.getMessage());
             return ResponseEntity.status(500).body(response);
         }
     }
@@ -300,29 +208,12 @@ public class ExerciseSetController {
     /**
      * 获取习题集的题目列表
      * @param exerciseSetId 习题集ID
-     * @param request HTTP请求
      * @return 题目列表
      */
     @GetMapping("/{exerciseSetId}/questions")
-    public ResponseEntity<Map<String, Object>> getQuestions(
-            @PathVariable Long exerciseSetId,
-            HttpServletRequest request) {
+    public ResponseEntity<Map<String, Object>> getQuestions(@PathVariable Long exerciseSetId) {
         Map<String, Object> response = new HashMap<>();
-        Long teacherId = jwtUtil.getUserIdFromRequest(request);
-        if (teacherId == null) {
-            response.put("success", false);
-            response.put("message", "未登录");
-            return ResponseEntity.status(401).body(response);
-        }
-        
         try {
-            ExerciseSet exerciseSet = exerciseSetService.getExerciseSetById(exerciseSetId);
-            if (exerciseSet == null) {
-                response.put("success", false);
-                response.put("message", "习题集不存在");
-                return ResponseEntity.status(404).body(response);
-            }
-            
             List<Question> questions = exerciseSetService.getQuestionsByExerciseSetId(exerciseSetId);
             response.put("success", true);
             response.put("data", questions);
@@ -347,32 +238,24 @@ public class ExerciseSetController {
             @RequestBody Question question,
             HttpServletRequest request) {
         Map<String, Object> response = new HashMap<>();
-        Long teacherId = jwtUtil.getUserIdFromRequest(request);
-        if (teacherId == null) {
-            response.put("success", false);
-            response.put("message", "未登录");
-            return ResponseEntity.status(401).body(response);
-        }
-        
         try {
-            ExerciseSet exerciseSet = exerciseSetService.getExerciseSetById(exerciseSetId);
-            if (exerciseSet == null) {
-                response.put("success", false);
-                response.put("message", "习题集不存在");
-                return ResponseEntity.status(404).body(response);
-            }
-            
-            // 设置习题集ID
             question.setExerciseSetId(exerciseSetId);
+            question.setCreateTime(LocalDateTime.now());
+            question.setUpdateTime(LocalDateTime.now());
+            
+            // 如果没有设置分值，默认为5分
+            if (question.getScore() == null) {
+                question.setScore(5);
+            }
             
             Question created = exerciseSetService.addQuestion(question);
             response.put("success", true);
-            response.put("message", "添加成功");
             response.put("data", created);
+            response.put("message", "添加成功");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             response.put("success", false);
-            response.put("message", "添加失败: " + e.getMessage());
+            response.put("message", "添加题目失败: " + e.getMessage());
             return ResponseEntity.status(500).body(response);
         }
     }
@@ -382,64 +265,31 @@ public class ExerciseSetController {
      * @param exerciseSetId 习题集ID
      * @param id 题目ID
      * @param question 题目信息
-     * @param request HTTP请求
      * @return 更新结果
      */
     @PutMapping("/{exerciseSetId}/questions/{id}")
     public ResponseEntity<Map<String, Object>> updateQuestion(
             @PathVariable Long exerciseSetId,
             @PathVariable Long id,
-            @RequestBody Question question,
-            HttpServletRequest request) {
+            @RequestBody Question question) {
         Map<String, Object> response = new HashMap<>();
-        Long teacherId = jwtUtil.getUserIdFromRequest(request);
-        if (teacherId == null) {
-            response.put("success", false);
-            response.put("message", "未登录");
-            return ResponseEntity.status(401).body(response);
-        }
-        
         try {
-            ExerciseSet exerciseSet = exerciseSetService.getExerciseSetById(exerciseSetId);
-            if (exerciseSet == null) {
-                response.put("success", false);
-                response.put("message", "习题集不存在");
-                return ResponseEntity.status(404).body(response);
-            }
-            
-            Question existingQuestion = exerciseSetService.getQuestionById(id);
-            if (existingQuestion == null) {
-                response.put("success", false);
-                response.put("message", "题目不存在");
-                return ResponseEntity.status(404).body(response);
-            }
-            
-            // 确保题目属于指定的习题集
-            if (!existingQuestion.getExerciseSetId().equals(exerciseSetId)) {
-                response.put("success", false);
-                response.put("message", "无权限访问");
-                return ResponseEntity.status(403).body(response);
-            }
-            
             question.setId(id);
             question.setExerciseSetId(exerciseSetId);
+            question.setUpdateTime(LocalDateTime.now());
             
-            boolean success = exerciseSetService.updateQuestion(id, question);
-            if (success) {
+            boolean result = exerciseSetService.updateQuestion(id, question);
+            if (result) {
                 response.put("success", true);
                 response.put("message", "更新成功");
-                // 获取更新后的题目信息
-                Question updated = exerciseSetService.getQuestionById(id);
-                response.put("data", updated);
-                return ResponseEntity.ok(response);
             } else {
                 response.put("success", false);
-                response.put("message", "更新失败");
-                return ResponseEntity.status(500).body(response);
+                response.put("message", "更新失败，题目不存在");
             }
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             response.put("success", false);
-            response.put("message", "更新失败: " + e.getMessage());
+            response.put("message", "更新题目失败: " + e.getMessage());
             return ResponseEntity.status(500).body(response);
         }
     }
@@ -448,57 +298,26 @@ public class ExerciseSetController {
      * 删除题目
      * @param exerciseSetId 习题集ID
      * @param id 题目ID
-     * @param request HTTP请求
      * @return 删除结果
      */
     @DeleteMapping("/{exerciseSetId}/questions/{id}")
     public ResponseEntity<Map<String, Object>> deleteQuestion(
             @PathVariable Long exerciseSetId,
-            @PathVariable Long id,
-            HttpServletRequest request) {
+            @PathVariable Long id) {
         Map<String, Object> response = new HashMap<>();
-        Long teacherId = jwtUtil.getUserIdFromRequest(request);
-        if (teacherId == null) {
-            response.put("success", false);
-            response.put("message", "未登录");
-            return ResponseEntity.status(401).body(response);
-        }
-        
         try {
-            ExerciseSet exerciseSet = exerciseSetService.getExerciseSetById(exerciseSetId);
-            if (exerciseSet == null) {
-                response.put("success", false);
-                response.put("message", "习题集不存在");
-                return ResponseEntity.status(404).body(response);
-            }
-            
-            Question existingQuestion = exerciseSetService.getQuestionById(id);
-            if (existingQuestion == null) {
-                response.put("success", false);
-                response.put("message", "题目不存在");
-                return ResponseEntity.status(404).body(response);
-            }
-            
-            // 确保题目属于指定的习题集
-            if (!existingQuestion.getExerciseSetId().equals(exerciseSetId)) {
-                response.put("success", false);
-                response.put("message", "无权限访问");
-                return ResponseEntity.status(403).body(response);
-            }
-            
-            boolean success = exerciseSetService.deleteQuestion(id);
-            if (success) {
+            boolean result = exerciseSetService.deleteQuestion(id);
+            if (result) {
                 response.put("success", true);
                 response.put("message", "删除成功");
-                return ResponseEntity.ok(response);
             } else {
                 response.put("success", false);
-                response.put("message", "删除失败");
-                return ResponseEntity.status(500).body(response);
+                response.put("message", "删除失败，题目不存在");
             }
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             response.put("success", false);
-            response.put("message", "删除失败: " + e.getMessage());
+            response.put("message", "删除题目失败: " + e.getMessage());
             return ResponseEntity.status(500).body(response);
         }
     }
@@ -507,47 +326,32 @@ public class ExerciseSetController {
      * 批量保存题目
      * @param exerciseSetId 习题集ID
      * @param questions 题目列表
-     * @param request HTTP请求
      * @return 保存结果
      */
     @PostMapping("/{exerciseSetId}/questions/batch")
     public ResponseEntity<Map<String, Object>> saveQuestions(
             @PathVariable Long exerciseSetId,
-            @RequestBody List<Question> questions,
-            HttpServletRequest request) {
+            @RequestBody List<Question> questions) {
         Map<String, Object> response = new HashMap<>();
-        Long teacherId = jwtUtil.getUserIdFromRequest(request);
-        if (teacherId == null) {
-            response.put("success", false);
-            response.put("message", "未登录");
-            return ResponseEntity.status(401).body(response);
-        }
-        
         try {
-            ExerciseSet exerciseSet = exerciseSetService.getExerciseSetById(exerciseSetId);
-            if (exerciseSet == null) {
-                response.put("success", false);
-                response.put("message", "习题集不存在");
-                return ResponseEntity.status(404).body(response);
+            // 先删除习题集下的所有题目
+            List<Question> existingQuestions = exerciseSetService.getQuestionsByExerciseSetId(exerciseSetId);
+            for (Question existingQuestion : existingQuestions) {
+                exerciseSetService.deleteQuestion(existingQuestion.getId());
             }
             
-            // 批量保存题目
-            List<Question> savedQuestions = new ArrayList<>();
-            int sortOrder = 1;
+            // 添加新题目
             for (Question question : questions) {
                 question.setExerciseSetId(exerciseSetId);
-                question.setSortOrder(sortOrder++);
-                Question saved = exerciseSetService.addQuestion(question);
-                savedQuestions.add(saved);
+                exerciseSetService.addQuestion(question);
             }
             
             response.put("success", true);
-            response.put("message", "题目保存成功，共保存" + savedQuestions.size() + "道题目");
-            response.put("data", savedQuestions);
+            response.put("message", "保存成功");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             response.put("success", false);
-            response.put("message", "保存题目失败: " + e.getMessage());
+            response.put("message", "批量保存题目失败: " + e.getMessage());
             return ResponseEntity.status(500).body(response);
         }
     }

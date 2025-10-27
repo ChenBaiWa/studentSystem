@@ -148,6 +148,8 @@ public class ExerciseSetServiceImpl implements ExerciseSetService {
         existing.setOptions(question.getOptions());
         existing.setAnswer(question.getAnswer());
         existing.setScore(question.getScore());
+        existing.setChapterId(question.getChapterId()); // 更新章节ID
+        existing.setChapterName(question.getChapterName()); // 更新章节名称
         existing.setUpdateTime(LocalDateTime.now());
         return questionMapper.update(existing) > 0;
     }

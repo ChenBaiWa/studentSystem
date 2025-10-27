@@ -60,6 +60,11 @@ export default defineConfig({
         target: 'http://localhost:8080',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/grades/, '/api/grades')
+      },
+      '/student/exercise-sets': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/student\/exercise-sets/, '/api/student/exercise-sets')
       }
     }
   }

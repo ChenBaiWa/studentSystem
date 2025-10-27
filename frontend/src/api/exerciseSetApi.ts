@@ -57,14 +57,19 @@ export const getPublishedExerciseSets = () => {
   return api.get('/student/exercise-sets').then(response => response.data)
 }
 
-// 创建习题集
-export const createExerciseSet = (exerciseSet: any) => {
-  return api.post('/exercise-sets', exerciseSet).then(response => response.data)
-}
-
 // 获取习题集详情
 export const getExerciseSet = (id: number) => {
   return api.get(`/exercise-sets/${id}`).then(response => response.data)
+}
+
+// 获取学生端章节列表
+export const getStudentChapters = (exerciseSetId: number) => {
+  return api.get(`/student/exercise-sets/${exerciseSetId}/chapters`).then(response => response.data)
+}
+
+// 创建习题集
+export const createExerciseSet = (exerciseSet: any) => {
+  return api.post('/exercise-sets', exerciseSet).then(response => response.data)
 }
 
 // 更新习题集
@@ -106,9 +111,14 @@ export const getQuestions = (exerciseSetId: number) => {
   return api.get(`/exercise-sets/${exerciseSetId}/questions`).then(response => response.data)
 }
 
-// 获取习题集的题目列表（学生端）
-export const getStudentQuestions = (exerciseSetId: number) => {
-  return api.get(`/student/exercise-sets/${exerciseSetId}/questions`).then(response => response.data)
+// 获取习题集的题目列表（学生端 - 章节模式）
+export const getStudentQuestions = (exerciseSetId: number, chapterId: number) => {
+  return api.get(`/student/exercise-sets/${exerciseSetId}/chapters/${chapterId}/questions`).then(response => response.data)
+}
+
+// 获取习题集的题目列表（学生端 - 直接模式）
+export const getStudentQuestionsDirect = (exerciseSetId: number) => {
+  return api.get(`/student/exercise-sets/${exerciseSetId}/direct`).then(response => response.data)
 }
 
 // 添加题目
@@ -129,4 +139,14 @@ export const deleteQuestion = (exerciseSetId: number, id: number) => {
 // 批量保存题目
 export const saveQuestions = (exerciseSetId: number, questions: any[]) => {
   return api.post(`/exercise-sets/${exerciseSetId}/questions/batch`, questions).then(response => response.data)
+}
+
+// 提交答题（章节模式）
+export const submitStudentAnswers = (exerciseSetId: number, chapterId: number, answers: any[]) => {
+  return api.post(`/student/exercise-sets/${exerciseSetId}/chapters/${chapterId}/answers`, answers).then(response => response.data)
+}
+
+// 提交答题（直接模式）
+export const submitStudentAnswersDirect = (exerciseSetId: number, answers: any[]) => {
+  return api.post(`/student/exercise-sets/${exerciseSetId}/direct/answers`, answers).then(response => response.data)
 }
