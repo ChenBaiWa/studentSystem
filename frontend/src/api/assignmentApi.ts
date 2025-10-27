@@ -84,5 +84,11 @@ export const deleteAssignment = (id: number) => {
 
 // 获取学生提交情况
 export const getStudentSubmissions = (assignmentId: number) => {
-  return api.get(`/assignments/${assignmentId}/submissions`).then(response => response.data)
+  return api.get(`/assignments/${assignmentId}/submissions`).then(response => {
+    // 确保返回正确的数据结构
+    if (response.data.success === false && response.data.message) {
+      return Promise.reject(new Error(response.data.message))
+    }
+    return response.data
+  })
 }

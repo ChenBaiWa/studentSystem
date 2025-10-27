@@ -46,11 +46,11 @@
             {{ formatDate(scope.row.deadline) }}
           </template>
         </el-table-column>
-        <el-table-column label="提交情况" width="150">
-          <template #default="scope">
-            <span>{{ scope.row.submissionCount || 0 }}/{{ scope.row.totalStudents || 0 }}</span>
-          </template>
-        </el-table-column>
+<!--        <el-table-column label="提交情况" width="150">-->
+<!--          <template #default="scope">-->
+<!--            <span>{{ scope.row.submissionCount || 0 }}/{{ scope.row.totalStudents || 0 }}</span>-->
+<!--          </template>-->
+<!--        </el-table-column>-->
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="scope">
             <el-button size="small" @click="viewDetails(scope.row)">查看详情</el-button>
@@ -300,9 +300,10 @@
               {{ scope.row.submitTime ? formatDate(scope.row.submitTime) : '-' }}
             </template>
           </el-table-column>
-          <el-table-column prop="status" label="批改状态" width="100">
+          <el-table-column prop="status" label="提交状态" width="100">
             <template #default="scope">
-              <el-tag v-if="scope.row.status === 'submitted'" type="warning">待批改</el-tag>
+              <el-tag v-if="scope.row.status === 'not_submitted'" type="info">未提交</el-tag>
+              <el-tag v-else-if="scope.row.status === 'submitted'" type="warning">待批改</el-tag>
               <el-tag v-else-if="scope.row.status === 'graded'" type="success">已批改</el-tag>
               <span v-else>-</span>
             </template>
@@ -312,18 +313,18 @@
               {{ scope.row.score !== null ? scope.row.score : '-' }}
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="100">
-            <template #default="scope">
-              <el-button
-                size="small"
-                type="primary"
-                @click="viewSubmission(scope.row)"
-                :disabled="!scope.row.answer"
-              >
-                查看
-              </el-button>
-            </template>
-          </el-table-column>
+<!--          <el-table-column label="操作" width="100">-->
+<!--            <template #default="scope">-->
+<!--&lt;!&ndash;              <el-button&ndash;&gt;-->
+<!--&lt;!&ndash;                size="small"&ndash;&gt;-->
+<!--&lt;!&ndash;                type="primary"&ndash;&gt;-->
+<!--&lt;!&ndash;                @click="viewSubmission(scope.row)"&ndash;&gt;-->
+<!--&lt;!&ndash;                :disabled="!scope.row.answer || scope.row.status === 'not_submitted'"&ndash;&gt;-->
+<!--&lt;!&ndash;              >&ndash;&gt;-->
+<!--&lt;!&ndash;                查看&ndash;&gt;-->
+<!--&lt;!&ndash;              </el-button>&ndash;&gt;-->
+<!--            </template>-->
+<!--          </el-table-column>-->
         </el-table>
       </div>
 
@@ -368,6 +369,8 @@ interface Assignment {
     creatorName?: string;
     createTime?: string;
     updateTime?: string;
+    submissionCount?: number;
+    totalStudents?: number;
 }
 
 interface StudentAssignment {
@@ -378,7 +381,7 @@ interface StudentAssignment {
     answer?: string;
     score?: number;
     feedback?: string;
-    status?: 'submitted' | 'graded';
+    status?: 'submitted' | 'graded' | 'not_submitted';
     submitTime?: string;
     gradeTime?: string;
     createTime?: string;
@@ -426,7 +429,7 @@ interface Chapter {
   creatorId?: number
   creatorName?: string
   createTime?: string
-  updateTime?: string
+  updateTime?: string;
 }
 
 // 数据相关
@@ -435,7 +438,7 @@ const classes = ref<Class[]>([]);
 const grades = ref<Grade[]>([]);
 const textbooks = ref<Textbook[]>([]);
 const chapters = ref<Chapter[]>([]);
-const studentSubmissions = ref<StudentAssignment[]>([]);
+const studentSubmissions = ref<any[]>([]);
 const loading = ref(false);
 const publishLoading = ref(false);
 
@@ -696,10 +699,15 @@ const viewDetails = async (assignment: Assignment) => {
   try {
     currentAssignment.value = assignment;
     const response = await getStudentSubmissions(assignment.id!);
-    studentSubmissions.value = response.data;
+    // 修复数据处理逻辑
+    if (response.success && response.data) {
+      studentSubmissions.value = response.data;
+    } else {
+      studentSubmissions.value = [];
+    }
     detailDialogVisible.value = true;
   } catch (error) {
-    ElMessage.error('加载作业详情失败');
+    ElMessage.error('加载作业详情失败: ' + (error as Error).message);
   }
 };
 

@@ -61,7 +61,7 @@
             </el-table-column>
           </el-table>
         </el-tab-pane>
-        
+
         <el-tab-pane label="已截止" name="expired">
           <el-empty v-if="expiredAssignments.length === 0" description="暂无已截止的作业" />
           <el-table v-else :data="expiredAssignments" style="width: 100%">
@@ -158,33 +158,36 @@
           <el-descriptions-item label="作业内容" :span="2">{{ currentSubmission.content }}</el-descriptions-item>
         </el-descriptions>
 
-        <div class="answer-section">
-          <h4>我的答案</h4>
-          <div class="answer-images">
-            <el-image
-              v-for="(img, index) in submissionImages"
-              :key="index"
-              :src="img"
-              :preview-src-list="submissionImages"
-              :initial-index="index"
-              fit="cover"
-              class="answer-image"
-              lazy
-            />
-          </div>
-        </div>
+<!--        <div class="answer-section">-->
+<!--          <h4>我的答案</h4>-->
+<!--          <div class="answer-images">-->
+<!--            <el-image-->
+<!--              v-for="(img, index) in submissionImages"-->
+<!--              :key="index"-->
+<!--              :src="img"-->
+<!--              :preview-src-list="submissionImages"-->
+<!--              :initial-index="index"-->
+<!--              fit="cover"-->
+<!--              class="answer-image"-->
+<!--              lazy-->
+<!--            />-->
+<!--          </div>-->
+<!--        </div>-->
 
         <div class="feedback-section">
           <h4>批改结果</h4>
-          <div v-if="currentSubmission.status === 'submitted'" class="pending-feedback">
+          <div v-if="!currentSubmission.studentAssignment" class="not-submitted-feedback">
+            <el-alert title="作业未提交" type="info" show-icon />
+          </div>
+          <div v-else-if="currentSubmission.studentAssignment.status === 'submitted'" class="pending-feedback">
             <el-alert title="等待老师批改" type="warning" show-icon />
           </div>
-          <div v-else-if="currentSubmission.status === 'graded'" class="graded-feedback">
+          <div v-else-if="currentSubmission.studentAssignment.status === 'graded'" class="graded-feedback">
             <el-descriptions :column="1">
               <el-descriptions-item label="得分">
-                <el-tag type="success">{{ currentSubmission.score }}分</el-tag>
+                <el-tag type="success">{{ currentSubmission.studentAssignment.score }}分</el-tag>
               </el-descriptions-item>
-              <el-descriptions-item label="AI批注">{{ currentSubmission.feedback || '无' }}</el-descriptions-item>
+              <el-descriptions-item label="AI批注">{{ currentSubmission.studentAssignment.feedback || '无' }}</el-descriptions-item>
             </el-descriptions>
           </div>
         </div>
@@ -258,27 +261,27 @@ const loadAssignments = async () => {
   try {
     loading.value = true
     const response = await getAllStudentAssignments()
-    
+
     // 处理后端返回的数据结构 { pending: [...], submitted: [...], expired: [...] }
     if (response.success && response.data) {
       const { pending = [], submitted = [], expired = [] } = response.data;
-      
+
       // 为每个作业项添加状态字段
       const pendingWithStatus = pending.map((item: any) => ({
         ...item,
         status: 'pending'
       }));
-      
+
       const submittedWithStatus = submitted.map((item: any) => ({
         ...item,
         status: 'submitted'
       }));
-      
+
       const expiredWithStatus = expired.map((item: any) => ({
         ...item,
         status: 'expired'
       }));
-      
+
       // 合并所有作业
       allAssignments.value = [...pendingWithStatus, ...submittedWithStatus, ...expiredWithStatus];
     } else {
@@ -313,13 +316,14 @@ const viewSubmissionDetails = async (submission: any) => {
       // 合并数据
       const mergedData = {
         ...response.data.assignment,
-        ...response.data.studentAssignment,
+        studentAssignment: response.data.studentAssignment,
         assignmentTitle: response.data.assignment.title,
         content: response.data.assignment.content,
         totalScore: response.data.assignment.totalScore,
         className: response.data.assignment.className,
         chapterName: response.data.assignment.chapterName,
-        deadline: response.data.assignment.deadline
+        deadline: response.data.assignment.deadline,
+        submitTime: response.data.studentAssignment?.submitTime
       }
       currentSubmission.value = mergedData
       detailDialogVisible.value = true
@@ -357,7 +361,7 @@ const handleFileChange = (file: UploadFile, files: UploadFiles) => {
       }
       return false
     }
-    
+
     // 检查文件类型
     const isImage = file.raw.type === 'image/jpeg' || file.raw.type === 'image/png'
     if (!isImage) {
@@ -370,7 +374,7 @@ const handleFileChange = (file: UploadFile, files: UploadFiles) => {
       return false
     }
   }
-  
+
   fileList.value = files
 }
 
@@ -382,38 +386,38 @@ const handleFileRemove = (file: UploadFile, files: UploadFiles) => {
 // 提交作业答案
 const submitAssignmentAnswer = async () => {
   if (!currentAssignment.value) return
-  
+
   if (fileList.value.length === 0) {
     ElMessage.warning('请至少上传一张图片')
     return
   }
-  
+
   // 检查截止时间
   if (new Date(currentAssignment.value.deadline).getTime() < Date.now()) {
     ElMessage.error('作业已截止，无法提交')
     return
   }
-  
+
   try {
     submitLoading.value = true
-    
+
     // 获取原始文件对象
     const rawFiles = fileList.value.map(file => file.raw).filter(file => file !== undefined) as File[]
-    
+
     // 上传图片到服务器
     const uploadResponse = await uploadHomeworkImages(rawFiles)
-    
+
     if (!uploadResponse.success) {
       throw new Error(uploadResponse.message || '上传图片失败')
     }
-    
+
     // 获取上传后的图片URL列表
     const imageUrls = uploadResponse.data.urls
-    
+
     // 调用提交作业API
     const answer = imageUrls.join(',')
     const response = await submitStudentAssignment(currentAssignment.value.id!, answer)
-    
+
     if (response.success) {
       ElMessage.success('作业提交成功')
       submitDialogVisible.value = false
@@ -444,8 +448,14 @@ const handleCloseSubmitDialog = () => {
 
 // 计算提交答案的图片URL列表
 const submissionImages = computed(() => {
-  if (!currentSubmission.value?.answer) return []
-  return currentSubmission.value.answer.split(',').filter((url: string) => url.trim() !== '')
+  if (!currentSubmission.value?.studentAssignment?.answer) return []
+  // 修复图片URL处理逻辑
+  const answer = currentSubmission.value.studentAssignment.answer
+  if (!answer) return []
+
+  // 分割逗号分隔的URL列表
+  const urls = answer.split(',').map((url: string) => url.trim()).filter((url: string) => url.length > 0)
+  return urls
 })
 </script>
 
