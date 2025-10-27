@@ -31,4 +31,11 @@ public interface ExerciseSetMapper {
 
     @Select("SELECT COUNT(*) FROM question WHERE exercise_set_id = #{exerciseSetId}")
     int countQuestionsByExerciseSetId(Long exerciseSetId);
+    
+    /**
+     * 获取所有已发布的习题集
+     * @return 已发布的习题集列表
+     */
+    @Select("SELECT * FROM exercise_set WHERE status = 'published' ORDER BY create_time DESC")
+    List<ExerciseSet> findPublished();
 }

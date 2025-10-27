@@ -8,6 +8,8 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 public class Question {
     private Long id;
     private Long exerciseSetId; // 习题集ID
+    private Long chapterId; // 章节ID
+    private String chapterName; // 章节名称
     private String type; // 题型: "choice"(选择题) / "fill"(填空题) / "subjective"(主观题)
     private String content; // 题干内容
     private String options; // 选项（JSON格式存储，适用于选择题）

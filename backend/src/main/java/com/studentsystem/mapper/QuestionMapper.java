@@ -27,4 +27,13 @@ public interface QuestionMapper {
     
     @Delete("DELETE FROM question WHERE exercise_set_id = #{exerciseSetId}")
     int deleteByExerciseSetId(Long exerciseSetId);
+    
+    /**
+     * 根据习题集ID和章节ID获取题目列表
+     * @param exerciseSetId 习题集ID
+     * @param chapterId 章节ID
+     * @return 题目列表
+     */
+    @Select("SELECT * FROM question WHERE exercise_set_id = #{exerciseSetId} AND chapter_id = #{chapterId} ORDER BY sort_order")
+    List<Question> findByExerciseSetIdAndChapterId(@Param("exerciseSetId") Long exerciseSetId, @Param("chapterId") Long chapterId);
 }

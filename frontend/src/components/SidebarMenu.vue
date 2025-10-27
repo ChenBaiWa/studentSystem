@@ -35,9 +35,14 @@
         <span>习题集管理</span>
       </el-menu-item>
 
-      <el-menu-item index="/student-assignments" v-if="userRole === 2">
+      <el-menu-item index="/student/assignments" v-if="userRole === 2">
         <el-icon><Document /></el-icon>
         <span>我的作业</span>
+      </el-menu-item>
+      
+      <el-menu-item index="/student/exercise-sets" v-if="userRole === 2">
+        <el-icon><Collection /></el-icon>
+        <span>习题练习</span>
       </el-menu-item>
     </el-menu>
   </div>

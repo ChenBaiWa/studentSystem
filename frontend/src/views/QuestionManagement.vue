@@ -193,8 +193,8 @@ import { useRoute, useRouter } from 'vue-router'
 const route = useRoute()
 const router = useRouter()
 
-// 获取习题集ID
-const exerciseSetId = Number(route.params.id)
+// 获取习题集ID (修复错误的参数获取方式)
+const exerciseSetId = Number(route.params.exerciseSetId)
 
 // 数据相关
 const exerciseSet = ref<ExerciseSet | null>(null)
@@ -230,6 +230,13 @@ const questionRules = {
 
 // 初始化
 onMounted(() => {
+  // 确保ID有效
+  if (isNaN(exerciseSetId) || exerciseSetId <= 0) {
+    ElMessage.error('无效的习题集ID')
+    router.push('/exercise-sets')
+    return
+  }
+  
   loadExerciseSet()
   loadQuestions()
 })

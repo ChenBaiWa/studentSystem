@@ -92,4 +92,18 @@ public interface ExerciseSetService {
      * @return 题目信息
      */
     Question getQuestionById(Long id);
+    
+    /**
+     * 获取所有已发布的习题集
+     * @return 已发布的习题集列表
+     */
+    List<ExerciseSet> getPublishedExerciseSets();
+    
+    /**
+     * 根据习题集ID和章节ID获取题目列表
+     * @param exerciseSetId 习题集ID
+     * @param chapterId 章节ID
+     * @return 题目列表
+     */
+    List<Question> getQuestionsByExerciseSetIdAndChapterId(Long exerciseSetId, Long chapterId);
 }

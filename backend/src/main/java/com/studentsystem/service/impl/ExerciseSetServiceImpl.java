@@ -178,4 +178,14 @@ public class ExerciseSetServiceImpl implements ExerciseSetService {
     public Question getQuestionById(Long id) {
         return questionMapper.findById(id);
     }
+    
+    @Override
+    public List<ExerciseSet> getPublishedExerciseSets() {
+        return exerciseSetMapper.findPublished();
+    }
+    
+    @Override
+    public List<Question> getQuestionsByExerciseSetIdAndChapterId(Long exerciseSetId, Long chapterId) {
+        return questionMapper.findByExerciseSetIdAndChapterId(exerciseSetId, chapterId);
+    }
 }

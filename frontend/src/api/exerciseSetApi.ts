@@ -47,9 +47,14 @@ api.interceptors.response.use(
   }
 )
 
-// 获取习题集列表
+// 获取教师的习题集列表
 export const getExerciseSets = () => {
   return api.get('/exercise-sets').then(response => response.data)
+}
+
+// 获取学生可做的习题集列表（已发布的）
+export const getPublishedExerciseSets = () => {
+  return api.get('/student/exercise-sets').then(response => response.data)
 }
 
 // 创建习题集
@@ -96,9 +101,14 @@ export const uploadAndParsePdf = (exerciseSetId: number, file: File) => {
   }).then(response => response.data)
 }
 
-// 获取习题集的题目列表
+// 获取习题集的题目列表（教师端）
 export const getQuestions = (exerciseSetId: number) => {
   return api.get(`/exercise-sets/${exerciseSetId}/questions`).then(response => response.data)
+}
+
+// 获取习题集的题目列表（学生端）
+export const getStudentQuestions = (exerciseSetId: number) => {
+  return api.get(`/student/exercise-sets/${exerciseSetId}/questions`).then(response => response.data)
 }
 
 // 添加题目
