@@ -20,7 +20,7 @@
         <el-menu-item index="/chapters">章节管理</el-menu-item>
       </el-sub-menu>
 
-      <el-menu-item index="/classes" v-if="userRole === 1">
+      <el-menu-item index="/classes" >
         <el-icon><House /></el-icon>
         <span>班级管理</span>
       </el-menu-item>

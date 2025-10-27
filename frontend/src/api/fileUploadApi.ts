@@ -1,4 +1,40 @@
 import http from './http'
+import axios from 'axios'
+
+const api = axios.create({
+  baseURL: '/api',
+  timeout: 300000,
+  headers: {
+    'Content-Type': 'multipart/form-data'
+  }
+})
+
+// 添加请求拦截器
+api.interceptors.request.use(
+  (config) => {
+    // 从 localStorage 或 sessionStorage 获取 token
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+    if (token) {
+      // 在每个请求中添加 Authorization 头
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+  },
+  (error) => {
+    return Promise.reject(error)
+  }
+)
+
+// 上传作业图片
+export const uploadHomeworkImages = (files: File[]) => {
+  const formData = new FormData()
+  
+  files.forEach((file, index) => {
+    formData.append(`images`, file)
+  })
+  
+  return api.post('/upload/homework', formData).then(response => response.data)
+}
 
 /**
  * 上传文件到服务器

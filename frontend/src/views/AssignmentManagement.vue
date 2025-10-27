@@ -663,19 +663,24 @@ const submitPublish = async () => {
     await publishFormRef.value.validate();
     publishLoading.value = true;
 
+    // 构造作业对象，包含章节相关信息
     const assignment = {
       title: publishForm.title,
-      chapterId: publishForm.chapterId!,
+      chapterId: publishForm.chapterId,
+      chapterName: getChapterNameById(publishForm.chapterId!), // 获取章节名称
       content: publishForm.content,
       totalScore: publishForm.totalScore,
       deadline: publishForm.deadline
     };
 
     const response = await publishAssignment(assignment, publishForm.classIds);
-      ElMessage.success('作业发布成功');
-      publishDialogVisible.value = false;
-      await loadAssignments();
-  }  finally {
+    ElMessage.success('作业发布成功');
+    publishDialogVisible.value = false;
+    await loadAssignments();
+  } catch (error: any) {
+    console.error('发布作业失败:', error);
+    ElMessage.error(error.message || '作业发布失败');
+  } finally {
     publishLoading.value = false;
   }
 };

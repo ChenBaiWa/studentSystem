@@ -1,51 +1,19 @@
 import axios from 'axios'
+import api from './http'
 
-const api = axios.create({
-  baseURL: '/api',
-  timeout: 1000000
-})
-
-// 添加请求拦截器
-api.interceptors.request.use(
-  (config) => {
-    // 从 localStorage 或 sessionStorage 获取 token
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-    if (token) {
-      // 在每个请求中添加 Authorization 头
-      config.headers.Authorization = `Bearer ${token}`
-    }
-    return config
-  },
-  (error) => {
-    return Promise.reject(error)
-  }
-)
-
-// 添加响应拦截器
-api.interceptors.response.use(
-  (response) => {
-    return response
-  },
-  (error) => {
-    if (error.response?.status === 401) {
-      // token 过期或无效，清除本地存储并跳转到登录页
-      localStorage.removeItem('token')
-      sessionStorage.removeItem('token')
-      localStorage.removeItem('userRole')
-      sessionStorage.removeItem('userRole')
-      localStorage.removeItem('realName')
-      sessionStorage.removeItem('realName')
-      localStorage.removeItem('userId')
-      sessionStorage.removeItem('userId')
-      
-      // 如果当前不在登录页，则跳转到登录页
-      if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
-        window.location.href = '/login'
-      }
-    }
-    return Promise.reject(error)
-  }
-)
+export interface StudentAssignment {
+  id?: number
+  assignmentId: number
+  studentId?: number
+  studentName?: string
+  answer?: string
+  score?: number
+  feedback?: string
+  status?: 'submitted' | 'graded'
+  submitTime?: string
+  createTime?: string
+  updateTime?: string
+}
 
 // 获取所有学生作业
 export const getAllStudentAssignments = () => {
@@ -75,4 +43,9 @@ export const updateStudentAssignment = (id: number, studentAssignment: any) => {
 // 删除学生作业
 export const deleteStudentAssignment = (id: number) => {
   return api.delete(`/student-assignments/${id}`).then(response => response.data)
+}
+
+// 获取作业的学生提交列表
+export const getStudentSubmissions = (assignmentId: number) => {
+  return api.get(`/assignments/${assignmentId}/submissions`).then(response => response.data)
 }
