@@ -1,51 +1,39 @@
 package com.studentsystem.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.studentsystem.entity.Student;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.*;
 
 import java.util.List;
-import java.util.Map;
 
 @Mapper
 public interface StudentMapper extends BaseMapper<Student> {
     
-    /**
-     * 根据姓名模糊查询
-     */
-    List<Student> selectByName(@Param("name") String name);
+    @Select("SELECT * FROM student WHERE id = #{id}")
+    Student selectById(Long id);
     
-    /**
-     * 根据性别查询
-     */
-    List<Student> selectByGender(@Param("gender") String gender);
-    
-    /**
-     * 分页查询学生
-     */
-    IPage<Student> selectPage(IPage<Student> page);
-    
-    /**
-     * 统计各性别学生数量
-     */
-    List<Map<String, Object>> countByGender();
-    
-    /**
-     * 批量插入学生
-     */
-    int insertBatch(@Param("list") List<Student> students);
-    
-    /**
-     * 批量更新学生
-     */
-    int updateBatch(@Param("list") List<Student> students);
-    
-    /**
-     * 根据用户ID查询学生
-     */
     @Select("SELECT * FROM student WHERE id = #{userId}")
-    Student selectByUserId(@Param("userId") Long userId);
+    Student selectByUserId(Long userId);
+    
+    @Insert("INSERT INTO student(id, name, gender, age, email, phone, address, create_time, update_time) " +
+            "VALUES(#{id}, #{name}, #{gender}, #{age}, #{email}, #{phone}, #{address}, #{createTime}, #{updateTime})")
+    int insert(Student student);
+    
+    @Update("UPDATE student SET name = #{name}, gender = #{gender}, age = #{age}, email = #{email}, phone = #{phone}, " +
+            "address = #{address}, update_time = #{updateTime} WHERE id = #{id}")
+    int update(Student student);
+    
+    @Delete("DELETE FROM student WHERE id = #{id}")
+    int deleteById(Long id);
+    
+    @Select("SELECT s.* FROM student s JOIN student_class sc ON s.id = sc.student_id WHERE sc.class_id = #{classId}")
+    List<Student> selectByClassId(Long classId);
+    
+    @Select("<script>" +
+            "SELECT * FROM student WHERE id IN " +
+            "<foreach item='item' collection='ids' open='(' separator=',' close=')'>" +
+            "#{item}" +
+            "</foreach>" +
+            "</script>")
+    List<Student> selectByIds(@Param("ids") List<Long> ids);
 }

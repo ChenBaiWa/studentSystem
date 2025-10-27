@@ -1,8 +1,12 @@
 package com.studentsystem.controller;
 
 import com.studentsystem.entity.Assignment;
+import com.studentsystem.entity.Student;
 import com.studentsystem.entity.StudentAssignment;
+import com.studentsystem.entity.StudentClass;
 import com.studentsystem.entity.SysUser;
+import com.studentsystem.mapper.StudentClassMapper;
+import com.studentsystem.mapper.StudentMapper;
 import com.studentsystem.service.AssignmentService;
 import com.studentsystem.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,7 +15,11 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/assignments")
@@ -20,6 +28,12 @@ public class AssignmentController {
 
     @Autowired
     private AssignmentService assignmentService;
+    
+    @Autowired
+    private StudentClassMapper studentClassMapper;
+    
+    @Autowired
+    private StudentMapper studentMapper;
 
     @Autowired
     private JwtUtil jwtUtil;
@@ -176,18 +190,67 @@ public class AssignmentController {
     }
 
     /**
-     * 获取作业的学生提交列表
+     * 获取作业的学生提交列表（包含未提交的学生）
      * @param id 作业ID
      * @return 学生提交列表
      */
     @GetMapping("/{id}/submissions")
-    public ResponseEntity<List<StudentAssignment>> getStudentSubmissions(@PathVariable Long id) {
-        Assignment assignment = assignmentService.getAssignmentById(id);
-        if (assignment == null) {
-            return ResponseEntity.notFound().build();
-        }
+    public ResponseEntity<Map<String, Object>> getStudentSubmissions(@PathVariable Long id, HttpServletRequest request) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            Assignment assignment = assignmentService.getAssignmentById(id);
+            if (assignment == null) {
+                response.put("success", false);
+                response.put("message", "作业不存在");
+                return ResponseEntity.notFound().build();
+            }
 
-        List<StudentAssignment> submissions = assignmentService.getStudentSubmissions(id);
-        return ResponseEntity.ok(submissions);
+            // 获取该班级的所有学生
+            List<StudentClass> studentClasses = studentClassMapper.selectByClassId(assignment.getClassId());
+            List<Long> studentIds = studentClasses.stream()
+                    .map(StudentClass::getStudentId)
+                    .collect(Collectors.toList());
+            
+            List<Student> allStudents = new ArrayList<>();
+            if (!studentIds.isEmpty()) {
+                allStudents = studentMapper.selectByIds(studentIds);
+            }
+
+            // 获取已提交的学生作业
+            List<StudentAssignment> submittedAssignments = assignmentService.getStudentSubmissions(id);
+            
+            // 构建完整的学生提交情况列表
+            List<Object> result = new ArrayList<>();
+            for (Student student : allStudents) {
+                // 查找该学生是否已提交作业
+                StudentAssignment submission = submittedAssignments.stream()
+                        .filter(sa -> sa.getStudentId().equals(student.getId()))
+                        .findFirst()
+                        .orElse(null);
+                
+                if (submission != null) {
+                    // 已提交
+                    result.add(submission);
+                } else {
+                    // 未提交，创建一个表示未提交的记录
+                    StudentAssignment notSubmitted = new StudentAssignment();
+                    notSubmitted.setStudentId(student.getId());
+                    notSubmitted.setStudentName(student.getName());
+                    notSubmitted.setAssignmentId(id);
+                    notSubmitted.setStatus("not_submitted");
+                    result.add(notSubmitted);
+                }
+            }
+            
+            response.put("success", true);
+            response.put("data", result);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.put("success", false);
+            response.put("message", "获取学生提交列表失败: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
     }
 }

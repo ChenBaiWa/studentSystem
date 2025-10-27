@@ -171,7 +171,7 @@ public class StudentAssignmentController {
 
     /**
      * 获取学生作业提交详情
-     * @param id 作业提交ID
+     * @param id 作业ID（注意：这里是作业ID，不是学生作业提交ID）
      * @param request HTTP请求
      * @return 作业提交详情
      */
@@ -188,15 +188,11 @@ public class StudentAssignmentController {
         }
 
         try {
-            StudentAssignment studentAssignment = studentAssignmentMapper.findById(id);
-            if (studentAssignment == null) {
-                response.put("success", false);
-                response.put("message", "作业提交记录不存在");
-                return ResponseEntity.status(404).body(response);
-            }
-
+            // 检查学生是否已提交该作业
+            StudentAssignment studentAssignment = studentAssignmentMapper.selectByAssignmentIdAndStudentId(id, studentId);
+            
             // 获取作业详情
-            Assignment assignment = assignmentMapper.findById(studentAssignment.getAssignmentId());
+            Assignment assignment = assignmentMapper.findById(id);
             if (assignment == null) {
                 response.put("success", false);
                 response.put("message", "作业不存在");
@@ -205,8 +201,8 @@ public class StudentAssignmentController {
 
             // 组合返回数据
             Map<String, Object> data = new HashMap<>();
-            data.put("studentAssignment", studentAssignment);
             data.put("assignment", assignment);
+            data.put("studentAssignment", studentAssignment); // 可能为null，表示未提交
 
             response.put("success", true);
             response.put("data", data);
@@ -272,11 +268,13 @@ public class StudentAssignmentController {
             studentAssignment.setSubmitTime(LocalDateTime.now());
             studentAssignment.setCreateTime(LocalDateTime.now());
             studentAssignment.setUpdateTime(LocalDateTime.now());
-            AiGradingResult gradingResult = gradeWithAI(data.getAnswer().split(","));
+            
             studentAssignmentMapper.insert(studentAssignment);
 
             // 调用AI自动批改
             try {
+                AiGradingResult gradingResult = gradeWithAI(data.getAnswer().split(","));
+                
                 // 更新学生作业记录
                 studentAssignment.setScore(gradingResult.getScore());
                 studentAssignment.setFeedback(gradingResult.getFeedback());
