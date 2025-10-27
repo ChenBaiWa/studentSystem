@@ -115,6 +115,9 @@ public class ExerciseSetServiceImpl implements ExerciseSetService {
         if (question.getScore() == null) {
             question.setScore(5); // 默认分值为5分
         }
+        if (question.getSortOrder() == null) {
+            question.setSortOrder(0);
+        }
         questionMapper.insert(question);
         
         // 更新习题集的题目数量

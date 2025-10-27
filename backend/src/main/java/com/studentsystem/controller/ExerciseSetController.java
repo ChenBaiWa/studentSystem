@@ -9,9 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @RestController
 @RequestMapping("/exercise-sets")
@@ -501,6 +499,55 @@ public class ExerciseSetController {
         } catch (Exception e) {
             response.put("success", false);
             response.put("message", "删除失败: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+    
+    /**
+     * 批量保存题目
+     * @param exerciseSetId 习题集ID
+     * @param questions 题目列表
+     * @param request HTTP请求
+     * @return 保存结果
+     */
+    @PostMapping("/{exerciseSetId}/questions/batch")
+    public ResponseEntity<Map<String, Object>> saveQuestions(
+            @PathVariable Long exerciseSetId,
+            @RequestBody List<Question> questions,
+            HttpServletRequest request) {
+        Map<String, Object> response = new HashMap<>();
+        Long teacherId = jwtUtil.getUserIdFromRequest(request);
+        if (teacherId == null) {
+            response.put("success", false);
+            response.put("message", "未登录");
+            return ResponseEntity.status(401).body(response);
+        }
+        
+        try {
+            ExerciseSet exerciseSet = exerciseSetService.getExerciseSetById(exerciseSetId);
+            if (exerciseSet == null) {
+                response.put("success", false);
+                response.put("message", "习题集不存在");
+                return ResponseEntity.status(404).body(response);
+            }
+            
+            // 批量保存题目
+            List<Question> savedQuestions = new ArrayList<>();
+            int sortOrder = 1;
+            for (Question question : questions) {
+                question.setExerciseSetId(exerciseSetId);
+                question.setSortOrder(sortOrder++);
+                Question saved = exerciseSetService.addQuestion(question);
+                savedQuestions.add(saved);
+            }
+            
+            response.put("success", true);
+            response.put("message", "题目保存成功，共保存" + savedQuestions.size() + "道题目");
+            response.put("data", savedQuestions);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "保存题目失败: " + e.getMessage());
             return ResponseEntity.status(500).body(response);
         }
     }

@@ -24,15 +24,14 @@ jackson:
 logging:
   level:
     com.studentsystem: DEBUG
-
-# JWT configurations
+# Add these JWT configurations to the existing file
 jwt:
   secret: student-system-jwt-secret-key-2025-10-22
   expiration: 7200000 # 2 hours in milliseconds
   remember-expiration: 604800000 # 7 days in milliseconds
 
+# 注释掉火山引擎的配置，因为暂时不使用
 # Ark AI configuration
-ark:
-  base-url: https://ark.cn-beijing.volces.com/api/v3
-  api-key: 5765d599-bfd9-4d21-a745-b092c80ef580
-  model-id: doubao-seed-1-6-251015
+# ark:
+#   base-url: https://ark.cn-beijing.volces.com/api/v3
+#   api-key: 5765d599-bfd9-4d21-a745-b092c80ef580
