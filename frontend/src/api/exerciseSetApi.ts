@@ -150,3 +150,13 @@ export const submitStudentAnswers = (exerciseSetId: number, chapterId: number, a
 export const submitStudentAnswersDirect = (exerciseSetId: number, answers: any[]) => {
   return api.post(`/student/exercise-sets/${exerciseSetId}/direct/answers`, answers).then(response => response.data)
 }
+
+// 获取批改结果（章节模式）
+export const getGradingResults = (exerciseSetId: number, chapterId: number) => {
+  return api.get(`/student/exercise-sets/${exerciseSetId}/chapters/${chapterId}/results`).then(response => response.data)
+}
+
+// 获取批改结果（直接模式）
+export const getDirectGradingResults = (exerciseSetId: number) => {
+  return api.get(`/student/exercise-sets/${exerciseSetId}/direct/results`).then(response => response.data)
+}

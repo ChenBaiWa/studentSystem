@@ -5,11 +5,24 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="43eb20cb-c85d-43ae-8338-5bd011130d2a" name="变更" comment="">
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/studentsystem/controller/ExerciseSetController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/studentsystem/controller/ExerciseSetController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/studentsystem/service/impl/ExerciseSetServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/studentsystem/service/impl/ExerciseSetServiceImpl.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/src/main/java/com/studentsystem/controller/StudentExerciseAutoGradeController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/src/main/java/com/studentsystem/service/StudentExerciseService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/src/main/java/com/studentsystem/service/impl/StudentExerciseServiceImpl.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/frontend/src/api/studentExerciseAutoGradeApi.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/frontend/src/views/StudentExerciseResult.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/studentsystem/controller/StudentExerciseController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/studentsystem/controller/StudentExerciseController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/studentsystem/mapper/StudentExerciseAnswerMapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/studentsystem/mapper/StudentExerciseAnswerMapper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/App.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/App.vue" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/api/exerciseSetApi.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/api/exerciseSetApi.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/ParsedQuestionDisplay.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/ParsedQuestionDisplay.vue" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/router/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/router/index.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/vite.config.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/vite.config.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/views/ExerciseSetManagement.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/views/ExerciseSetManagement.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/views/Login.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/views/Login.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/views/PdfUpload.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/views/PdfUpload.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/views/QuestionManagement.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/views/QuestionManagement.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/views/StudentAssignmentList.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/views/StudentAssignmentList.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/views/StudentExerciseQuestion.vue" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/views/StudentExerciseQuestion.vue" afterDir="false" />
     </list>
     <list id="7218489d-7718-4649-8764-de44765e354f" name="不提交" comment="" />
     <option name="SHOW_DIALOG" value="false" />
@@ -56,7 +69,7 @@
       <workItem from="1761469585172" duration="14969000" />
       <workItem from="1761534363311" duration="10674000" />
       <workItem from="1761561356367" duration="6439000" />
-      <workItem from="1761568620268" duration="4750000" />
+      <workItem from="1761568620268" duration="8243000" />
     </task>
     <task id="LOCAL-00001" summary="修复bug">
       <created>1761571151917</created>
@@ -65,7 +78,14 @@
       <option name="project" value="LOCAL" />
       <updated>1761571151917</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="完善学生端习题册第二个业务需求">
+      <created>1761573444218</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1761573444218</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -75,6 +95,7 @@
     <option name="CHECK_CODE_SMELLS_BEFORE_PROJECT_COMMIT" value="false" />
     <option name="CHECK_NEW_TODO" value="false" />
     <MESSAGE value="修复bug" />
-    <option name="LAST_COMMIT_MESSAGE" value="修复bug" />
+    <MESSAGE value="完善学生端习题册第二个业务需求" />
+    <option name="LAST_COMMIT_MESSAGE" value="完善学生端习题册第二个业务需求" />
   </component>
 </project>

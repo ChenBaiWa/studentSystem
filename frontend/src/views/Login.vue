@@ -175,8 +175,8 @@ const handleLogin = async () => {
     // 老师角色 - 跳转到年级管理页面
     router.push('/grades')
   } else if (response.data?.userRole === 2) {
-    // 学生角色 - 跳转到学生列表页面
-    router.push('/')
+    // 学生角色 - 跳转到学生习题集列表页面
+    router.push('/student/exercise-sets')
   }
 }
   } catch (error) {

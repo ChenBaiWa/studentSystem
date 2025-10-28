@@ -17,7 +17,7 @@
         <el-table-column prop="createTime" label="创建时间" />
         <el-table-column label="操作" width="200">
           <template #default="scope">
-            <el-button size="small" @click="showStudentList(scope.row)">查看学生</el-button>
+<!--            <el-button size="small" @click="showStudentList(scope.row)">查看学生</el-button>-->
             <el-button size="small" @click="showEditDialog(scope.row)">编辑</el-button>
             <el-button size="small" type="danger" @click="deleteClassHandler(scope.row)">删除</el-button>
           </template>

@@ -25,7 +25,7 @@
         </div>
         
         <!-- 填空题和解答题答案 -->
-        <div v-if="question.type === 'fill' || question.type === 'solve'" class="answer-section">
+        <div v-if="question.type === 'fill' || question.type === 'subjective'" class="answer-section">
           <div class="answer-label">答案：</div>
           <div class="answer-content">{{ question.answer }}</div>
         </div>
@@ -56,7 +56,7 @@
 import { defineProps, defineEmits } from 'vue'
 
 interface Question {
-  type: 'choice' | 'fill' | 'solve'
+  type: 'choice' | 'fill' | 'subjective'
   content: string
   options?: Array<{ content: string }>
   answer: string
@@ -76,7 +76,7 @@ const getQuestionTypeName = (type: string) => {
   switch (type) {
     case 'choice': return '选择题'
     case 'fill': return '填空题'
-    case 'solve': return '解答题'
+    case 'subjective': return '解答题'
     default: return '未知题型'
   }
 }
@@ -86,7 +86,7 @@ const getQuestionTypeTag = (type: string) => {
   switch (type) {
     case 'choice': return 'primary'
     case 'fill': return 'success'
-    case 'solve': return 'warning'
+    case 'subjective': return 'warning'
     default: return 'info'
   }
 }
@@ -99,7 +99,7 @@ const isCorrectOption = (question: Question, optionIndex: number) => {
 
 // 获取最大分值
 const getMaxScore = (type: string) => {
-  return type === 'solve' ? 20 : 10
+  return type === 'subjective' ? 20 : 10
 }
 
 // 编辑题目

@@ -35,7 +35,7 @@
           <template #default="scope">
             <el-tag v-if="scope.row.type === 'choice'">选择题</el-tag>
             <el-tag v-else-if="scope.row.type === 'fill'">填空题</el-tag>
-            <el-tag v-else-if="scope.row.type === 'solve'">解答题</el-tag>
+            <el-tag v-else-if="scope.row.type === 'subjective'">解答题</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="content" label="题干" min-width="300">
@@ -76,7 +76,7 @@
           >
             <el-option label="选择题" value="choice" />
             <el-option label="填空题" value="fill" />
-            <el-option label="解答题" value="solve" />
+            <el-option label="解答题" value="subjective" />
           </el-select>
         </el-form-item>
 
@@ -111,7 +111,7 @@
 
         <el-form-item label="答案" prop="answer">
           <el-input
-            v-if="questionForm.type === 'fill' || questionForm.type === 'solve'"
+            v-if="questionForm.type === 'fill' || questionForm.type === 'subjective'"
             v-model="questionForm.answer"
             type="textarea"
             :rows="3"
@@ -138,7 +138,7 @@
           <el-input-number
             v-model="questionForm.score"
             :min="1"
-            :max="questionForm.type === 'solve' ? 20 : 10"
+            :max="questionForm.type === 'subjective' ? 20 : 10"
             controls-position="right"
           />
         </el-form-item>
@@ -345,7 +345,7 @@ const handleQuestionTypeChange = (value: string) => {
   }
   
   // 设置默认分值
-  if (value === 'solve') {
+  if (value === 'subjective') {
     questionForm.score = 10
   } else {
     questionForm.score = 5

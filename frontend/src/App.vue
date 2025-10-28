@@ -10,7 +10,7 @@
         <div class="user-info">
           <el-dropdown @command="handleUserCommand">
             <span class="el-dropdown-link">
-              <el-avatar size="small" :icon="userRole === 1 ? 'User' : 'UserFilled'" />
+<!--              <el-avatar size="small" :icon="userRole === 1 ? 'User' : 'UserFilled'" />-->
               <span class="username">{{ realName }}</span>
               <el-icon class="el-icon--right">
                 <arrow-down />
@@ -77,7 +77,7 @@ onMounted(() => {
     // 获取用户信息
     getUserInfo()
   }
-  
+
   // 监听用户登录事件
   window.addEventListener('user-login', handleUserLogin)
 })

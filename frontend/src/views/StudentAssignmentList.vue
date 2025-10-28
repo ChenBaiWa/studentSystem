@@ -46,12 +46,12 @@
                 {{ formatDate(scope.row.submitTime) }}
               </template>
             </el-table-column>
-            <el-table-column prop="status" label="批改状态" width="100">
-              <template #default="scope">
-                <el-tag v-if="scope.row.status === 'submitted'" type="warning">待批改</el-tag>
-                <el-tag v-else-if="scope.row.status === 'graded'" type="success">已批改</el-tag>
-              </template>
-            </el-table-column>
+<!--            <el-table-column prop="status" label="批改状态" width="100">-->
+<!--              <template #default="scope">-->
+<!--                <el-tag v-if="scope.row.status === 'submitted'" type="warning">待批改</el-tag>-->
+<!--                <el-tag v-else-if="scope.row.status === 'graded'" type="success">已批改</el-tag>-->
+<!--              </template>-->
+<!--            </el-table-column>-->
             <el-table-column label="操作" width="120" fixed="right">
               <template #default="scope">
                 <el-button size="small" @click="viewSubmissionDetails(scope.row)">

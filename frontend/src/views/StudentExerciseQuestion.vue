@@ -15,7 +15,7 @@
       <div v-if="currentQuestion">
         <div class="question-content">
           <h3>
-            {{ currentQuestionIndex + 1 }}. 
+            {{ currentQuestionIndex + 1 }}.
             {{ currentQuestion.content }}
             <el-tag size="small" :type="getQuestionTypeTag(currentQuestion.type)">
               {{ getQuestionTypeText(currentQuestion.type) }}
@@ -26,14 +26,14 @@
 
         <!-- 选择题 -->
         <div v-if="currentQuestion.type === 'choice'" class="choice-question">
-          <el-radio-group 
-            v-model="answers[currentQuestion.id]" 
+          <el-radio-group
+            v-model="answers[currentQuestion.id]"
             class="choice-options"
-            @change="saveAnswerTemporarily"
+            @change="saveAnswerImmediately"
           >
-            <el-radio 
-              v-for="(option, index) in parseOptions(currentQuestion.options)" 
-              :key="index" 
+            <el-radio
+              v-for="(option, index) in parseOptions(currentQuestion.options)"
+              :key="index"
               :label="String.fromCharCode(65 + index)"
               class="choice-option"
             >
@@ -44,70 +44,86 @@
 
         <!-- 填空题 -->
         <div v-else-if="currentQuestion.type === 'fill'" class="fill-question">
-          <el-input 
-            v-model="answers[currentQuestion.id]" 
-            type="textarea" 
+          <el-input
+            v-model="answers[currentQuestion.id]"
+            type="textarea"
             :rows="3"
             placeholder="请输入答案"
-            @blur="saveAnswerTemporarily"
+            @blur="saveAnswerImmediately"
           />
         </div>
 
         <!-- 主观题 -->
-        <div v-else-if="currentQuestion.type === 'subjective'" class="subjective-question">
-          <el-input 
-            v-model="answers[currentQuestion.id]" 
-            type="textarea" 
-            :rows="5"
-            placeholder="请输入答案"
-            @blur="saveAnswerTemporarily"
-          />
+        <div v-else-if="currentQuestion.type === 'subjective'" class="solve-question">
+          <el-form-item label="答案">
+            <!-- 主观题答案输入框 -->
+            <el-input
+              v-model="currentAnswer"
+              type="textarea"
+              :rows="6"
+              placeholder="请输入答案"
+              @blur="submitCurrentAnswer()"
+            />
+          </el-form-item>
           
-          <!-- 图片上传 -->
           <div class="image-upload-section">
-            <p>上传解题过程图片:</p>
-            <el-upload
-              :auto-upload="false"
-              list-type="picture-card"
-              :file-list="imageFileLists[currentQuestion.id] || []"
-              :on-change="(file, fileList) => handleImageChange(currentQuestion.id, file, fileList)"
-              :on-remove="(file, fileList) => handleImageChange(currentQuestion.id, file, fileList)"
-              :limit="3"
-              :on-exceed="() => ElMessage.warning('最多只能上传3张图片')"
-            >
-              <el-icon><Plus /></el-icon>
-            </el-upload>
+            <div class="upload-tip">
+              <el-icon><InfoFilled /></el-icon>
+              <span>主观题支持上传图片作答，上传后自动保存</span>
+            </div>
+            
+            <ImageUpload 
+              :on-success="handleImageUploadSuccess"
+              :on-error="handleImageUploadError"
+            />
           </div>
         </div>
+
       </div>
-      
+
       <el-empty v-else-if="!loading" description="暂无题目" />
     </el-card>
 
     <!-- 答题导航 -->
     <div class="navigation-buttons">
-      <el-button 
-        @click="prevQuestion" 
+      <el-button
+        @click="prevQuestion"
         :disabled="currentQuestionIndex <= 0"
       >
         上一题
       </el-button>
-      
-      <el-button 
-        @click="nextQuestion" 
+
+      <el-button
+        @click="nextQuestion"
         :disabled="currentQuestionIndex >= questions.length - 1"
       >
         下一题
       </el-button>
-      
-      <el-button 
-        type="primary" 
+
+      <el-button
+        type="primary"
         @click="submitAnswers"
         :loading="submitting"
       >
         提交答案
       </el-button>
     </div>
+
+    <!-- 批改状态 -->
+    <el-dialog
+      v-model="gradingDialogVisible"
+      title="正在批改"
+      width="30%"
+      :close-on-click-modal="false"
+      :close-on-press-escape="false"
+      :show-close="false"
+    >
+      <div class="grading-status">
+        <el-progress type="circle" :percentage="gradingProgress" />
+        <p v-if="gradingProgress < 100">正在批改，请稍候...</p>
+        <p v-else>批改完成！</p>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -115,13 +131,14 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRoute, useRouter } from 'vue-router'
-import { 
-  getExerciseSet, 
-  getStudentQuestions, 
+import {
+  getExerciseSet,
+  getStudentQuestions,
   submitStudentAnswers,
   getStudentQuestionsDirect,
   submitStudentAnswersDirect
 } from '@/api/exerciseSetApi'
+import { analyzeImageWithDoubao } from '@/api/doubaoApi'
 import type { UploadFile, UploadUserFile } from 'element-plus'
 
 // 数据状态
@@ -131,9 +148,12 @@ const questions = ref<any[]>([])
 const currentQuestionIndex = ref(0)
 const answers = ref<Record<number, string>>({})
 const imageFileLists = ref<Record<number, UploadUserFile[]>>({})
+const aiAnalysisResults = ref<Record<number, string>>({}) // AI解析结果
 const loading = ref(false)
 const submitting = ref(false)
 const isDirectMode = ref(false) // 是否为直接模式（跳过章节）
+const gradingDialogVisible = ref(false) // 批改对话框可见性
+const gradingProgress = ref(0) // 批改进度
 
 // 路由
 const route = useRoute()
@@ -149,18 +169,21 @@ const totalScore = computed(() => {
   return questions.value.reduce((sum, question) => sum + question.score, 0)
 })
 
+// 防抖定时器
+const debounceTimers = ref<Record<number, number>>({})
+
 // 初始化
 onMounted(() => {
   const exerciseSetId = Number(route.params.exerciseSetId)
-  
+
   if (!exerciseSetId || isNaN(exerciseSetId)) {
     ElMessage.error('参数错误')
     router.push('/student/exercise-sets')
     return
   }
-  
+
   loadExerciseSet(exerciseSetId)
-  
+
   // 判断是否为直接模式（路径中包含direct）
   if (route.path.includes('/direct')) {
     isDirectMode.value = true
@@ -213,7 +236,7 @@ const loadChapter = async (exerciseSetId: number, chapterId: number) => {
       }
     })
     const result = await response.json()
-    
+
     if (result.success) {
       const chapters = result.data
       chapter.value = chapters.find((c: any) => c.id === chapterId)
@@ -231,7 +254,7 @@ const loadQuestions = async (exerciseSetId: number, chapterId: number) => {
   try {
     loading.value = true
     const response = await getStudentQuestions(exerciseSetId, chapterId)
-    
+
     if (response.success) {
       questions.value = response.data
       // 初始化答案
@@ -255,7 +278,7 @@ const loadQuestionsDirect = async (exerciseSetId: number) => {
   try {
     loading.value = true
     const response = await getStudentQuestionsDirect(exerciseSetId)
-    
+
     if (response.success) {
       questions.value = response.data
       // 初始化答案
@@ -292,24 +315,24 @@ const getQuestionTypeText = (type: string) => {
     'fill': '填空题',
     'subjective': '主观题'
   }
-  return typeMap[type] || type
+  return typeMap[type] || '未知题型'
 }
 
-// 获取题型标签类型
+// 获取题目类型标签
 const getQuestionTypeTag = (type: string) => {
   const tagMap: Record<string, string> = {
-    'choice': '',
-    'fill': 'warning',
-    'subjective': 'danger'
+    'choice': 'primary',
+    'fill': 'success',
+    'subjective': 'warning'
   }
-  return tagMap[type] || ''
+  return tagMap[type] || 'info'
 }
 
 // 处理图片上传变化
 const handleImageChange = async (questionId: number, file: UploadFile, fileList: UploadUserFile[]) => {
   // 更新文件列表
   imageFileLists.value[questionId] = fileList
-  
+
   // 检查是否有新上传的文件
   if (file.status === 'ready') {
     // 模拟上传图片到服务器
@@ -317,24 +340,27 @@ const handleImageChange = async (questionId: number, file: UploadFile, fileList:
       // 这里应该调用实际的上传API
       // 暂时模拟上传成功
       await new Promise(resolve => setTimeout(resolve, 1000))
-      
+
       // 模拟返回图片URL
       const imageUrl = 'https://example.com/uploaded-image.jpg'
-      
+
       // 更新文件对象
       const index = fileList.findIndex(f => f.uid === file.uid)
       if (index !== -1) {
         fileList[index].url = imageUrl
         fileList[index].status = 'success'
       }
-      
+
       ElMessage.success('图片上传成功')
-      
+
       // 自动保存答案
-      saveAnswerTemporarily()
+      saveAnswerImmediately()
+
+      // 调用AI解析图片
+      await analyzeImageWithAI(questionId, imageUrl)
     } catch (error) {
       ElMessage.error('图片上传失败')
-      
+
       // 更新文件状态
       const index = fileList.findIndex(f => f.uid === file.uid)
       if (index !== -1) {
@@ -342,73 +368,84 @@ const handleImageChange = async (questionId: number, file: UploadFile, fileList:
       }
     }
   }
-  
+
   // 更新文件列表
   imageFileLists.value[questionId] = [...fileList]
 }
 
-// 临时保存答案
-const saveAnswerTemporarily = () => {
-  // 在实际应用中，这里可以将答案保存到本地存储或发送到服务器
-  console.log('临时保存答案:', answers.value)
+// 调用AI解析图片
+const analyzeImageWithAI = async (questionId: number, imageUrl: string) => {
+  try {
+    const question = questions.value.find(q => q.id === questionId)
+    if (!question) return
+
+    const prompt = `请分析这张图片中的解题过程，题目是：${question.content}。请给出评价和建议。`
+    const result = await analyzeImageWithDoubao(imageUrl, prompt)
+
+    if (result.choices && result.choices.length > 0) {
+      const content = result.choices[0].message?.content || 'AI分析完成'
+      aiAnalysisResults.value[questionId] = content
+      ElMessage.success('AI解析完成')
+    }
+  } catch (error: any) {
+    console.error('AI解析失败:', error)
+    ElMessage.error('AI解析失败: ' + (error.message || '未知错误'))
+  }
+}
+
+// 立即保存答案
+const saveAnswerImmediately = () => {
+  // 在实际应用中，这里可以将答案保存到服务器
+  console.log('立即保存答案:', answers.value)
   console.log('图片列表:', imageFileLists.value)
-  ElMessage.success({ message: '答案已暂存', duration: 1000 })
+  ElMessage.success({ message: '答案已保存', duration: 1000 })
+}
+
+// 防抖保存答案
+const saveAnswerDebounced = (value: string) => {
+  const questionId = currentQuestion.value.id
+  // 清除之前的定时器
+  if (debounceTimers.value[questionId]) {
+    clearTimeout(debounceTimers.value[questionId])
+  }
+
+  // 设置新的定时器
+  debounceTimers.value[questionId] = window.setTimeout(() => {
+    saveAnswerImmediately()
+    delete debounceTimers.value[questionId]
+  }, 1000) // 1秒防抖
 }
 
 // 上一题
 const prevQuestion = () => {
   if (currentQuestionIndex.value > 0) {
-    // 切换题目前提示保存
-    if (isCurrentQuestionAnswered()) {
-      ElMessageBox.confirm('切换题目将自动保存当前答案，是否继续?', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }).then(() => {
-        saveAnswerTemporarily()
-        currentQuestionIndex.value--
-      }).catch(() => {
-        // 用户取消切换
-      })
-    } else {
-      currentQuestionIndex.value--
-    }
+    // 直接保存当前答案
+    saveAnswerImmediately()
+    currentQuestionIndex.value--
   }
 }
 
 // 下一题
 const nextQuestion = () => {
   if (currentQuestionIndex.value < questions.value.length - 1) {
-    // 切换题目前提示保存
-    if (isCurrentQuestionAnswered()) {
-      ElMessageBox.confirm('切换题目将自动保存当前答案，是否继续?', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }).then(() => {
-        saveAnswerTemporarily()
-        currentQuestionIndex.value++
-      }).catch(() => {
-        // 用户取消切换
-      })
-    } else {
-      currentQuestionIndex.value++
-    }
+    // 直接保存当前答案
+    saveAnswerImmediately()
+    currentQuestionIndex.value++
   }
 }
 
 // 检查当前题目是否已作答
 const isCurrentQuestionAnswered = () => {
   if (!currentQuestion.value) return false
-  
+
   const answer = answers.value[currentQuestion.value.id]
   const images = imageFileLists.value[currentQuestion.value.id]
-  
+
   // 对于选择题和填空题，检查是否有答案
   if (currentQuestion.value.type === 'choice' || currentQuestion.value.type === 'fill') {
     return !!answer
   }
-  
+
   // 对于主观题，检查是否有答案或图片
   return !!answer || (images && images.length > 0)
 }
@@ -421,20 +458,20 @@ const submitAnswers = async () => {
       cancelButtonText: '取消',
       type: 'warning'
     })
-    
+
     submitting.value = true
-    
+
     // 构造提交数据
     const submitData = questions.value.map(question => {
       const answerData: any = {
         questionId: question.id,
-        answerType: question.type === 'subjective' ? 2 : 1 // 1=文本, 2=图片
+        answerType: question.type === 'solve' ? 2 : 1 // 1=文本, 2=图片
       }
-      
-      if (question.type === 'subjective') {
+
+      if (question.type === 'solve') {
         // 主观题提交答案和图片
         answerData.answer = answers.value[question.id] || ''
-        
+
         // 获取图片URL列表
         const imageUrls = imageFileLists.value[question.id]
           ?.filter(file => file.status === 'success')
@@ -444,31 +481,57 @@ const submitAnswers = async () => {
         // 其他题型提交文本答案
         answerData.answer = answers.value[question.id] || ''
       }
-      
+
       return answerData
     })
-    
+
+    // 显示批改对话框
+    gradingDialogVisible.value = true
+    gradingProgress.value = 0
+
+    // 模拟批改进度
+    const progressInterval = setInterval(() => {
+      if (gradingProgress.value < 90) {
+        gradingProgress.value += 10
+      } else {
+        clearInterval(progressInterval)
+      }
+    }, 300)
+
     let response;
     // 根据模式选择不同的提交方法
     if (isDirectMode.value) {
       // 直接模式提交
       response = await submitStudentAnswersDirect(
-        Number(route.params.exerciseSetId), 
+        Number(route.params.exerciseSetId),
         submitData
       )
     } else {
       // 章节模式提交
       response = await submitStudentAnswers(
-        Number(route.params.exerciseSetId), 
-        Number(route.params.chapterId), 
+        Number(route.params.exerciseSetId),
+        Number(route.params.chapterId),
         submitData
       )
     }
-    
+
     if (response.success) {
-      ElMessage.success('答案提交成功')
-      // 跳转到习题集列表页
-      router.push('/student/exercise-sets')
+      // 完成批改
+      clearInterval(progressInterval)
+      gradingProgress.value = 100
+
+      // 延迟一段时间后跳转到结果页面
+      setTimeout(() => {
+        gradingDialogVisible.value = false
+
+        if (isDirectMode.value) {
+          // 直接模式跳转到结果页面
+          router.push(`/student/exercise-sets/${route.params.exerciseSetId}/direct/results`)
+        } else {
+          // 章节模式跳转到结果页面
+          router.push(`/student/exercise-sets/${route.params.exerciseSetId}/chapters/${route.params.chapterId}/results`)
+        }
+      }, 1000)
     } else {
       throw new Error(response.message || '提交失败')
     }
@@ -481,6 +544,82 @@ const submitAnswers = async () => {
     submitting.value = false
   }
 }
+
+// 提交当前题目答案
+const submitCurrentAnswer = async (nextQuestionIndex?: number) => {
+  if (!currentQuestion.value) return
+
+  try {
+    // 校验答案是否填写
+    if (currentQuestion.value.type === 'choice' && !currentAnswer.value) {
+      ElMessage.warning('请选择答案')
+      return
+    }
+    
+    if ((currentQuestion.value.type === 'fill' || currentQuestion.value.type === 'subjective') && 
+        !currentAnswer.value.trim()) {
+      ElMessage.warning('请填写答案')
+      return
+    }
+    
+    // 保存当前题目答案
+    const answerData = {
+      questionId: currentQuestion.value.id,
+      answer: currentAnswer.value,
+      answerType: currentQuestion.value.type === 'subjective' ? 2 : 1 // 1=文本, 2=图片
+    }
+    
+    const response = await saveStudentAnswer(answerData)
+    if (!response.success) {
+      throw new Error(response.message || '保存答案失败')
+    }
+    
+    // 更新本地答案记录
+    const answerIndex = studentAnswers.value.findIndex(a => a.questionId === currentQuestion.value!.id)
+    if (answerIndex >= 0) {
+      studentAnswers.value[answerIndex] = response.data
+    } else {
+      studentAnswers.value.push(response.data)
+    }
+    
+    // 如果有下一个题目索引，则跳转到该题目
+    if (nextQuestionIndex !== undefined && nextQuestionIndex >= 0 && nextQuestionIndex < questions.value.length) {
+      currentQuestionIndex.value = nextQuestionIndex
+      loadCurrentAnswer()
+    }
+    
+    ElMessage.success('答案保存成功')
+  } catch (error: any) {
+    console.error('保存答案失败:', error)
+    ElMessage.error(error.message || '保存答案失败')
+  }
+}
+
+// 处理图片上传成功
+const handleImageUploadSuccess = (response: any) => {
+  if (response.success) {
+    // 直接保存图片答案
+    currentAnswer.value = response.data.url
+    // 图片上传成功后自动保存答案
+    submitCurrentAnswer()
+  } else {
+    ElMessage.error(response.message || '图片上传失败')
+  }
+}
+
+// 处理题目导航
+const navigateToQuestion = async (index: number) => {
+  if (index < 0 || index >= questions.value.length) return
+
+  // 先保存当前答案
+  if (currentQuestion.value) {
+    await submitCurrentAnswer(index)
+  } else {
+    currentQuestionIndex.value = index
+    loadCurrentAnswer()
+  }
+}
+
 </script>
 
 <style scoped>
@@ -521,6 +660,10 @@ const submitAnswers = async () => {
   margin-bottom: 10px;
 }
 
+.solve-textarea {
+  margin-bottom: 20px;
+}
+
 .navigation-buttons {
   margin-top: 30px;
   text-align: center;
@@ -537,5 +680,26 @@ const submitAnswers = async () => {
 .image-upload-section p {
   margin-bottom: 10px;
   font-weight: bold;
+}
+
+.grading-status {
+  text-align: center;
+}
+
+.grading-status p {
+  margin-top: 20px;
+  font-size: 16px;
+}
+
+.ai-analysis-result {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+}
+
+.ai-analysis-result h4 {
+  margin-top: 0;
+  margin-bottom: 10px;
 }
 </style>

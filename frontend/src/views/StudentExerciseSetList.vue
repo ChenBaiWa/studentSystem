@@ -11,7 +11,7 @@
       <el-table :data="exerciseSets" style="width: 100%" v-loading="loading">
         <el-table-column prop="name" label="习题集名称" min-width="200" />
         <el-table-column prop="subject" label="学科" width="120" />
-        <el-table-column prop="questionCount" label="题目数" width="100" />
+<!--        <el-table-column prop="questionCount" label="题目数" width="100" />-->
         <el-table-column prop="createTime" label="创建时间" width="180">
           <template #default="scope">
             {{ formatDate(scope.row.createTime) }}
@@ -19,9 +19,9 @@
         </el-table-column>
         <el-table-column label="操作" width="150" fixed="right">
           <template #default="scope">
-            <el-button 
-              size="small" 
-              type="primary" 
+            <el-button
+              size="small"
+              type="primary"
               @click="startExercise(scope.row)"
             >
               开始做题
@@ -57,7 +57,7 @@ const loadExerciseSets = async () => {
   try {
     loading.value = true
     const response = await getPublishedExerciseSets()
-    
+
     if (response.success) {
       exerciseSets.value = response.data
     } else {

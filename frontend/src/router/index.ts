@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 import Login from '@/views/Login.vue'
 import Register from '@/views/Register.vue'
 import AssignmentManagement from '@/views/AssignmentManagement.vue'
@@ -17,12 +17,13 @@ import DoubaoImageAnalysis from '@/views/DoubaoImageAnalysis.vue'
 import StudentExerciseSetList from '@/views/StudentExerciseSetList.vue'
 import StudentExerciseChapterList from '@/views/StudentExerciseChapterList.vue'
 import StudentExerciseQuestion from '@/views/StudentExerciseQuestion.vue'
+import StudentExerciseResult from '@/views/StudentExerciseResult.vue'
 
 const routes = [
   { path: '/', redirect: '/login' },
   { path: '/login', component: Login },
   { path: '/register', component: Register },
-  
+
   // 教师端路由
   { path: '/assignments', component: AssignmentManagement },
   { path: '/classes', component: ClassManagement },
@@ -36,7 +37,7 @@ const routes = [
   { path: '/doubao-pdf-analysis', component: DoubaoPdfAnalysis },
   { path: '/doubao-file-analysis', component: DoubaoFileAnalysis },
   { path: '/doubao-image-analysis', component: DoubaoImageAnalysis },
-  
+
   // 学生端路由
   { path: '/student/assignments', component: StudentAssignmentList },
   { path: '/student-assignments', redirect: '/student/assignments' }, // 兼容旧路由
@@ -44,10 +45,12 @@ const routes = [
   { path: '/student/exercise-sets/:exerciseSetId/chapters', component: StudentExerciseChapterList, props: true },
   { path: '/student/exercise-sets/:exerciseSetId/chapters/:chapterId', component: StudentExerciseQuestion, props: true },
   { path: '/student/exercise-sets/:exerciseSetId/direct', component: StudentExerciseQuestion, props: true },
+  { path: '/student/exercise-sets/:exerciseSetId/chapters/:chapterId/results', component: StudentExerciseResult, props: true },
+  { path: '/student/exercise-sets/:exerciseSetId/direct/results', component: StudentExerciseResult, props: true },
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHashHistory(),
   routes
 })
 
@@ -55,10 +58,10 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   // 检查是否有有效的token
   const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-  
+
   // 不需要登录的页面
   const noAuthRoutes = ['/login', '/register']
-  
+
   if (!token && !noAuthRoutes.includes(to.path)) {
     // 未登录且访问需要登录的页面，跳转到登录页
     next('/login')
@@ -67,10 +70,12 @@ router.beforeEach((to, from, next) => {
     const userRole = localStorage.getItem('userRole') || sessionStorage.getItem('userRole')
     if (userRole === '1') {
       // 老师
-      next('/assignments')
-    } else {
+      next('/grades')
+    } else if (userRole === '2') {
       // 学生
-      next('/student/assignments')
+      next('/student/exercise-sets')
+    } else {
+      next()
     }
   } else {
     // 其他情况正常跳转

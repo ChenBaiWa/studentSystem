@@ -251,13 +251,18 @@ const handlePdfAnalysisComplete = async (questions: any[]) => {
       throw new Error('未选择习题集')
     }
 
+    // 检查questions参数是否有效
+    if (!questions || !Array.isArray(questions)) {
+      throw new Error('解析结果格式错误')
+    }
+
     isParsing.value = true
 
     // 直接将解析的题目保存到数据库中
     const response = await saveQuestions(pdfForm.exerciseSetId, questions)
 
     if (response.success) {
-      ElMessage.success(`题目保存成功，共保存${response.data.length}道题目`)
+      ElMessage.success(`题目保存成功，共保存${questions.length}道题目`)
       // 重新加载习题集列表以更新题目数量
       loadExerciseSets()
       // 关闭对话框
@@ -266,6 +271,7 @@ const handlePdfAnalysisComplete = async (questions: any[]) => {
       throw new Error(response.message || '保存题目失败')
     }
   } catch (error: any) {
+    console.error('处理PDF解析结果失败:', error)
     ElMessage.error(error.message || '保存题目失败')
   } finally {
     isParsing.value = false

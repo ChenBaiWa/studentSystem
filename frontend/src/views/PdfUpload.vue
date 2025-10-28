@@ -204,12 +204,19 @@ const useAnalysisResult = () => {
     emit('analysisComplete', questions)
     ElMessage.success('解析结果已保存到习题集')
   } catch (err) {
-    ElMessage.error('解析结果处理失败')
+    console.error('解析结果处理失败:', err)
+    ElMessage.error('解析结果处理失败: ' + (err instanceof Error ? err.message : String(err)))
   }
 }
 
 // 将AI返回的数据转换为后端需要的格式
 const convertAiDataToQuestions = (aiData: any) => {
+  // 检查aiData是否有效
+  if (!aiData) {
+    console.warn('AI数据为空')
+    return []
+  }
+  
   const questions: any[] = []
   let sortOrder = 1
   
@@ -235,12 +242,23 @@ const convertAiDataToQuestions = (aiData: any) => {
     })
   }
   
-  // 处理主观题
+  // 处理主观题 (将solve统一改为subjective)
   if (aiData.subjective && Array.isArray(aiData.subjective)) {
     aiData.subjective.forEach((question: any) => {
       questions.push({
         ...question,
         type: 'subjective',
+        sortOrder: sortOrder++
+      })
+    })
+  }
+  
+  // 兼容旧的solve类型
+  if (aiData.solve && Array.isArray(aiData.solve)) {
+    aiData.solve.forEach((question: any) => {
+      questions.push({
+        ...question,
+        type: 'subjective', // 统一转换为subjective
         sortOrder: sortOrder++
       })
     })

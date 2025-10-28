@@ -349,6 +349,27 @@ public class StudentExerciseController {
                 answerIds.add(answer.getId());
             }
             
+            // 自动批改客观题
+            List<StudentExerciseAnswer> submittedAnswers = studentExerciseAnswerMapper.findByStudentIdAndQuestionIds(studentId, questionIdsStr);
+            Map<Long, StudentExerciseAnswer> answerMap = submittedAnswers.stream()
+                    .collect(Collectors.toMap(StudentExerciseAnswer::getQuestionId, a -> a));
+            
+            Map<Long, Question> questionMap = questions.stream()
+                    .collect(Collectors.toMap(Question::getId, q -> q));
+            
+            // 批改客观题
+            for (Question question : questions) {
+                if ("choice".equals(question.getType()) || "fill".equals(question.getType())) {
+                    StudentExerciseAnswer answer = answerMap.get(question.getId());
+                    if (answer != null) {
+                        // 执行自动批改
+                        autoGradeObjectiveQuestion(question, answer);
+                        // 更新数据库
+                        studentExerciseAnswerMapper.updateGradingResult(answer);
+                    }
+                }
+            }
+            
             response.put("success", true);
             response.put("message", "提交成功");
             response.put("data", answerIds);
@@ -443,6 +464,27 @@ public class StudentExerciseController {
                 answerIds.add(answer.getId());
             }
             
+            // 自动批改客观题
+            List<StudentExerciseAnswer> submittedAnswers = studentExerciseAnswerMapper.findByStudentIdAndQuestionIds(studentId, questionIdsStr);
+            Map<Long, StudentExerciseAnswer> answerMap = submittedAnswers.stream()
+                    .collect(Collectors.toMap(StudentExerciseAnswer::getQuestionId, a -> a));
+            
+            Map<Long, Question> questionMap = questions.stream()
+                    .collect(Collectors.toMap(Question::getId, q -> q));
+            
+            // 批改客观题
+            for (Question question : questions) {
+                if ("choice".equals(question.getType()) || "fill".equals(question.getType())) {
+                    StudentExerciseAnswer answer = answerMap.get(question.getId());
+                    if (answer != null) {
+                        // 执行自动批改
+                        autoGradeObjectiveQuestion(question, answer);
+                        // 更新数据库
+                        studentExerciseAnswerMapper.updateGradingResult(answer);
+                    }
+                }
+            }
+            
             response.put("success", true);
             response.put("message", "提交成功");
             response.put("data", answerIds);
@@ -450,6 +492,236 @@ public class StudentExerciseController {
         } catch (Exception e) {
             response.put("success", false);
             response.put("message", "提交答题失败: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+    
+    /**
+     * 自动批改客观题（选择题和填空题）
+     * @param question 题目
+     * @param answer 学生答案
+     */
+    private void autoGradeObjectiveQuestion(Question question, StudentExerciseAnswer answer) {
+        String correctAnswer = question.getAnswer();
+        String studentAnswer = answer.getAnswer();
+        
+        boolean isCorrect = false;
+        if ("choice".equals(question.getType())) {
+            // 选择题直接比较选项
+            isCorrect = Objects.equals(correctAnswer, studentAnswer);
+        } else if ("fill".equals(question.getType())) {
+            // 填空题忽略大小写和空格进行比较
+            if (correctAnswer != null && studentAnswer != null) {
+                isCorrect = correctAnswer.trim().toLowerCase().equals(studentAnswer.trim().toLowerCase());
+            }
+        }
+        
+        // 设置批改结果
+        answer.setCorrectStatus(isCorrect ? 1 : 2); // 1=正确，2=错误
+        answer.setScore(isCorrect ? question.getScore() : 0); // 正确得分，错误0分
+        answer.setRemark(isCorrect ? "答案正确" : "答案错误，正确答案：" + correctAnswer);
+        answer.setUpdateTime(LocalDateTime.now());
+    }
+    
+    /**
+     * 获取批改结果
+     * @param exerciseSetId 习题集ID
+     * @param chapterId 章节ID
+     * @param request HTTP请求
+     * @return 批改结果
+     */
+    @GetMapping("/{exerciseSetId}/chapters/{chapterId}/results")
+    public ResponseEntity<Map<String, Object>> getGradingResults(
+            @PathVariable Long exerciseSetId,
+            @PathVariable Long chapterId,
+            HttpServletRequest request) {
+        Map<String, Object> response = new HashMap<>();
+        Long studentId = jwtUtil.getUserIdFromRequest(request);
+        if (studentId == null) {
+            response.put("success", false);
+            response.put("message", "未登录");
+            return ResponseEntity.status(401).body(response);
+        }
+
+        try {
+            // 检查习题集是否存在且已发布
+            ExerciseSet exerciseSet = exerciseSetService.getExerciseSetById(exerciseSetId);
+            if (exerciseSet == null) {
+                response.put("success", false);
+                response.put("message", "习题集不存在");
+                return ResponseEntity.status(404).body(response);
+            }
+
+            if (!"published".equals(exerciseSet.getStatus())) {
+                response.put("success", false);
+                response.put("message", "习题集未发布");
+                return ResponseEntity.status(400).body(response);
+            }
+
+            List<Question> questions;
+            // 如果章节ID为0，表示获取所有未分配章节的题目
+            if (chapterId == 0) {
+                questions = exerciseSetService.getQuestionsByExerciseSetId(exerciseSetId)
+                        .stream()
+                        .filter(q -> q.getChapterId() == null)
+                        .collect(Collectors.toList());
+            } else {
+                // 获取该章节下的所有题目
+                questions = exerciseSetService.getQuestionsByExerciseSetIdAndChapterId(exerciseSetId, chapterId);
+            }
+            
+            // 获取学生答题结果
+            Set<Long> questionIds = questions.stream().map(Question::getId).collect(Collectors.toSet());
+            String questionIdsStr = questionIds.stream()
+                    .map(String::valueOf)
+                    .collect(Collectors.joining(","));
+            
+            List<StudentExerciseAnswer> answers = studentExerciseAnswerMapper.findByStudentIdAndQuestionIds(studentId, questionIdsStr);
+            
+            // 构造返回结果
+            Map<String, Object> result = new HashMap<>();
+            result.put("exerciseSetName", exerciseSet.getName());
+            
+            // 计算总分
+            int totalScore = answers.stream()
+                    .mapToInt(answer -> answer.getScore() != null ? answer.getScore() : 0)
+                    .sum();
+            result.put("totalScore", totalScore);
+            
+            // 添加答题时间
+            if (!answers.isEmpty()) {
+                result.put("submitTime", answers.get(0).getCreateTime());
+            }
+            
+            // 构造题目和答案列表
+            List<Map<String, Object>> questionResults = new ArrayList<>();
+            Map<Long, StudentExerciseAnswer> answerMap = answers.stream()
+                    .collect(Collectors.toMap(StudentExerciseAnswer::getQuestionId, a -> a));
+            
+            for (Question question : questions) {
+                Map<String, Object> questionResult = new HashMap<>();
+                questionResult.put("question", question);
+                
+                StudentExerciseAnswer answer = answerMap.get(question.getId());
+                if (answer != null) {
+                    questionResult.put("studentAnswer", answer.getAnswer());
+                    questionResult.put("score", answer.getScore());
+                    questionResult.put("remark", answer.getRemark());
+                    questionResult.put("correctStatus", answer.getCorrectStatus());
+                } else {
+                    questionResult.put("studentAnswer", "");
+                    questionResult.put("score", 0);
+                    questionResult.put("remark", "未作答");
+                    questionResult.put("correctStatus", 2); // 未作答视为错误
+                }
+                
+                questionResults.add(questionResult);
+            }
+            
+            result.put("questions", questionResults);
+            
+            response.put("success", true);
+            response.put("data", result);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "获取批改结果失败: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+    
+    /**
+     * 获取直接模式的批改结果
+     * @param exerciseSetId 习题集ID
+     * @param request HTTP请求
+     * @return 批改结果
+     */
+    @GetMapping("/{exerciseSetId}/direct/results")
+    public ResponseEntity<Map<String, Object>> getDirectGradingResults(
+            @PathVariable Long exerciseSetId,
+            HttpServletRequest request) {
+        Map<String, Object> response = new HashMap<>();
+        Long studentId = jwtUtil.getUserIdFromRequest(request);
+        if (studentId == null) {
+            response.put("success", false);
+            response.put("message", "未登录");
+            return ResponseEntity.status(401).body(response);
+        }
+
+        try {
+            // 检查习题集是否存在且已发布
+            ExerciseSet exerciseSet = exerciseSetService.getExerciseSetById(exerciseSetId);
+            if (exerciseSet == null) {
+                response.put("success", false);
+                response.put("message", "习题集不存在");
+                return ResponseEntity.status(404).body(response);
+            }
+
+            if (!"published".equals(exerciseSet.getStatus())) {
+                response.put("success", false);
+                response.put("message", "习题集未发布");
+                return ResponseEntity.status(400).body(response);
+            }
+
+            // 获取该习题集下的所有题目
+            List<Question> questions = exerciseSetService.getQuestionsByExerciseSetId(exerciseSetId);
+            
+            // 获取学生答题结果
+            Set<Long> questionIds = questions.stream().map(Question::getId).collect(Collectors.toSet());
+            String questionIdsStr = questionIds.stream()
+                    .map(String::valueOf)
+                    .collect(Collectors.joining(","));
+            
+            List<StudentExerciseAnswer> answers = studentExerciseAnswerMapper.findByStudentIdAndQuestionIds(studentId, questionIdsStr);
+            
+            // 构造返回结果
+            Map<String, Object> result = new HashMap<>();
+            result.put("exerciseSetName", exerciseSet.getName());
+            
+            // 计算总分
+            int totalScore = answers.stream()
+                    .mapToInt(answer -> answer.getScore() != null ? answer.getScore() : 0)
+                    .sum();
+            result.put("totalScore", totalScore);
+            
+            // 添加答题时间
+            if (!answers.isEmpty()) {
+                result.put("submitTime", answers.get(0).getCreateTime());
+            }
+            
+            // 构造题目和答案列表
+            List<Map<String, Object>> questionResults = new ArrayList<>();
+            Map<Long, StudentExerciseAnswer> answerMap = answers.stream()
+                    .collect(Collectors.toMap(StudentExerciseAnswer::getQuestionId, a -> a));
+            
+            for (Question question : questions) {
+                Map<String, Object> questionResult = new HashMap<>();
+                questionResult.put("question", question);
+                
+                StudentExerciseAnswer answer = answerMap.get(question.getId());
+                if (answer != null) {
+                    questionResult.put("studentAnswer", answer.getAnswer());
+                    questionResult.put("score", answer.getScore());
+                    questionResult.put("remark", answer.getRemark());
+                    questionResult.put("correctStatus", answer.getCorrectStatus());
+                } else {
+                    questionResult.put("studentAnswer", "");
+                    questionResult.put("score", 0);
+                    questionResult.put("remark", "未作答");
+                    questionResult.put("correctStatus", 2); // 未作答视为错误
+                }
+                
+                questionResults.add(questionResult);
+            }
+            
+            result.put("questions", questionResults);
+            
+            response.put("success", true);
+            response.put("data", result);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "获取批改结果失败: " + e.getMessage());
             return ResponseEntity.status(500).body(response);
         }
     }

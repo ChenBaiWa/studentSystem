@@ -30,4 +30,18 @@ public interface StudentExerciseAnswerMapper {
     
     @Delete("DELETE FROM student_exercise_answer WHERE student_id = #{studentId} AND question_id IN (${questionIds})")
     int deleteByStudentIdAndQuestionIds(@Param("studentId") Long studentId, @Param("questionIds") String questionIds);
+    
+    /**
+     * 更新批改结果
+     */
+    @Update("UPDATE student_exercise_answer SET score = #{score}, remark = #{remark}, correct_status = #{correctStatus}, update_time = #{updateTime} WHERE id = #{id}")
+    int updateGradingResult(StudentExerciseAnswer answer);
+    
+    /**
+     * 根据学生ID和习题集ID获取答题结果
+     */
+    @Select("SELECT sea.* FROM student_exercise_answer sea " +
+            "JOIN question q ON sea.question_id = q.id " +
+            "WHERE sea.student_id = #{studentId} AND q.exercise_set_id = #{exerciseSetId}")
+    List<StudentExerciseAnswer> findByStudentIdAndExerciseSetId(@Param("studentId") Long studentId, @Param("exerciseSetId") Long exerciseSetId);
 }
